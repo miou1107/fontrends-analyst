@@ -164,10 +164,10 @@ function classifyIntents(keywords) {
   };
 
   const patterns = {
-    shopping: /價格|價位|哪裡買|代購|打折|優惠|outlet|sale|buy|price|shop/i,
-    info: /什麼|介紹|歷史|設計師|是誰|系列|新款|spring|fall|collection/i,
-    navigation: /官網|門市|專櫃|地址|台北|101|店|store|boutique/i,
-    comparison: /vs|比較|推薦|值得|好嗎|差別|review|worth/i,
+    shopping: /價格|價位|哪裡買|代購|打折|優惠|outlet|sale|buy|price|shop|包包|短夾|長夾|鞋子|男包|女包|腰包|外套|圍巾|皮帶|手錶|香水|bag|wallet|shoe|speedy|neverfull|keepall/i,
+    info: /什麼|介紹|歷史|設計師|是誰|系列|新款|spring|fall|collection|發音|尺寸|材質|保養|真假|辨別|鑑定|size|how|what/i,
+    navigation: /官網|門市|專櫃|地址|台北|101|店|store|boutique|歐洲|法國|日本|outlet|百貨/i,
+    comparison: /vs|比較|推薦|值得|好嗎|差別|review|worth|評價|開箱|心得|ptt/i,
   };
 
   for (const kw of keywords) {
