@@ -1,0 +1,75 @@
+{
+  "typography": {
+    "title": { "font": "Noto Sans TC", "size": 24, "bold": true },
+    "subtitle": { "font": "Noto Sans TC", "size": 14, "bold": false },
+    "body": { "font": "Noto Sans TC", "size": 11 },
+    "table_header": { "font": "Noto Sans TC", "size": 9, "bold": true },
+    "table_body": { "font": "Noto Sans TC", "size": 9 },
+    "note": { "font": "Noto Sans TC", "size": 9, "italic": true },
+    "disclaimer": { "font": "Noto Sans TC", "size": 8, "italic": true },
+    "kpi_value": { "font": "Noto Sans TC", "size": 22, "bold": true },
+    "kpi_label": { "font": "Noto Sans TC", "size": 11 },
+    "speaker_notes": { "font": "Noto Sans TC", "size": 12 }
+  },
+  "table": {
+    "header_fill": "primary",
+    "header_text": "FFFFFF",
+    "row_alt_fill": null,
+    "border_width": 0.5,
+    "border_color": "CCCCCC",
+    "max_rows_gslides": 6,
+    "max_rows_pptx": 12
+  },
+  "kpi_card": {
+    "bg_fill": "FFFFFF",
+    "accent_width": 0.06,
+    "card_width": 2.8,
+    "card_height": 1.4,
+    "gap_x": 0.3,
+    "gap_y": 0.25,
+    "cols": 3
+  },
+  "bar_chart": {
+    "max_width": 4.5,
+    "bar_height": 0.30,
+    "bar_gap": 0.42
+  },
+  "shapes": {
+    "corner_radius": 0,
+    "shadow": {
+      "enabled": false,
+      "blur": 3,
+      "offset": 2,
+      "opacity": 0.15,
+      "color": "000000"
+    },
+    "title_underline": {
+      "enabled": true,
+      "color": "primary",
+      "width": 2,
+      "height": 0.04
+    }
+  },
+  "spacing": {
+    "page_margin": 0.5,
+    "header_y": 0.3,
+    "content_start_y": 1.2,
+    "note_y": 5.1,
+    "disclaimer_y": 5.35,
+    "element_gap": 0.3
+  },
+  "slide": {
+    "width": 10,
+    "height": 5.625
+  },
+  "colors": {
+    "positive": "2E7D32",
+    "negative": "C62828",
+    "neutral_sent": "F9A825",
+    "gray": "666666",
+    "lightGray": "CCCCCC",
+    "midGray": "999999",
+    "white": "FFFFFF",
+    "black": "0A0A0A"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name": "executive-5",
+  "description": "高管版 5 頁精要報告",
+  "pages": [
+    { "pageId": "cover", "title": "封面", "background": "dark", "elements": ["brand_name", "subtitle", "period", "credit"] },
+    { "pageId": "summary", "title": "執行摘要", "background": "light", "elements": ["bullet_list"] },
+    { "pageId": "kpi", "title": "社群總覽 KPI", "background": "light", "elements": ["kpi_cards", "comparison_note"] },
+    { "pageId": "actions", "title": "行動建議", "background": "light", "elements": ["table"] },
+    { "pageId": "closing", "title": "結語", "background": "dark", "elements": ["thank_you", "next_steps", "footer"] }
+  ]
+}

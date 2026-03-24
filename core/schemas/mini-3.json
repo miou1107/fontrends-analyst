@@ -1,0 +1,9 @@
+{
+  "name": "mini-3",
+  "description": "極簡 3 頁快速報告",
+  "pages": [
+    { "pageId": "cover", "title": "封面", "background": "dark", "elements": ["brand_name", "subtitle", "period", "credit"] },
+    { "pageId": "overview", "title": "品牌總覽", "background": "light", "elements": ["kpi_cards", "bullet_list", "comparison_note"] },
+    { "pageId": "actions_closing", "title": "行動建議 & 下一步", "background": "light", "elements": ["table", "next_steps"] }
+  ]
+}

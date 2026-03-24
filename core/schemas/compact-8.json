@@ -1,0 +1,14 @@
+{
+  "name": "compact-8",
+  "description": "精簡 8 頁品牌分析報告",
+  "pages": [
+    { "pageId": "cover", "title": "封面", "background": "dark", "elements": ["brand_name", "subtitle", "period", "credit"] },
+    { "pageId": "summary", "title": "執行摘要", "background": "light", "elements": ["bullet_list"] },
+    { "pageId": "kpi", "title": "社群總覽 KPI", "background": "light", "elements": ["kpi_cards", "comparison_note"] },
+    { "pageId": "trend", "title": "聲量趨勢分析", "background": "light", "elements": ["table", "insight_note"] },
+    { "pageId": "platform", "title": "平台聲量分析", "background": "light", "elements": ["table", "insight_note"] },
+    { "pageId": "sentiment", "title": "好感度分析", "background": "light", "elements": ["bar_chart", "comparison_table", "insight_note", "disclaimer"] },
+    { "pageId": "actions", "title": "行動建議", "background": "light", "elements": ["table"] },
+    { "pageId": "closing", "title": "結語", "background": "dark", "elements": ["thank_you", "next_steps", "footer"] }
+  ]
+}

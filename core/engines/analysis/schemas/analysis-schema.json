@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "analysis.json",
+  "description": "§4 Data Analysis Agent output schema v1.0",
+  "type": "object",
+  "required": ["meta", "dimensions", "cross_dimensional", "recommendations", "quality", "ml_insights"],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "required": ["brand", "period", "generated_at", "schema_version", "comparison_periods"],
+      "properties": {
+        "brand": { "type": "string" },
+        "period": { "type": "string" },
+        "generated_at": { "type": "string", "format": "date-time" },
+        "schema_version": { "type": "string" },
+        "comparison_periods": {
+          "type": "object",
+          "properties": {
+            "mom": { "$ref": "#/$defs/comparison_period" },
+            "qoq": { "$ref": "#/$defs/comparison_period" },
+            "yoy": { "$ref": "#/$defs/comparison_period" }
+          }
+        },
+        "primary_competitor": { "type": "string" },
+        "market_competitors": { "type": "array", "items": { "type": "string" } },
+        "methodology_version": { "type": "string" }
+      }
+    },
+    "dimensions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["derived_metrics", "insights"],
+        "properties": {
+          "derived_metrics": { "type": "object" },
+          "self_comparison": { "type": "object" },
+          "competitor_comparison": {},
+          "anomalies": { "type": "array" },
+          "insights": { "type": "array" }
+        }
+      }
+    },
+    "cross_dimensional": {
+      "type": "object",
+      "required": ["correlations", "market_position"],
+      "properties": {
+        "correlations": { "type": "array" },
+        "anomalies": { "type": "array" },
+        "market_position": {
+          "type": "object",
+          "required": ["overall_score", "quadrant"],
+          "properties": {
+            "overall_score": { "type": "number", "minimum": 0, "maximum": 100 },
+            "quadrant": { "type": "string", "enum": ["leader", "challenger", "niche", "follower"] }
+          }
+        }
+      }
+    },
+    "recommendations": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 12
+    },
+    "quality": {
+      "type": "object",
+      "required": ["data_completeness", "caveats"],
+      "properties": {
+        "data_completeness": { "type": "number", "minimum": 0, "maximum": 1 },
+        "confidence_scores": { "type": "object" },
+        "data_sources": { "type": "object" },
+        "caveats": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "ml_insights": {}
+  },
+  "$defs": {
+    "comparison_period": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["available", "insufficient_data", "not_attempted"] },
+        "period": { "type": ["string", "null"] }
+      }
+    }
+  }
+}

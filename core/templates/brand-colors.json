@@ -1,0 +1,11 @@
+{
+  "_note": "Hex 色碼不加 # 前綴（pptxgenjs 規範）",
+  "brands": {
+    "louis-vuitton": { "name": "Louis Vuitton", "primary": "BFA06A", "secondary": "0A0A0A", "dark_bg": "0A0A0A", "light_bg": "F5F0E8", "accent": "D4B483", "text_on_dark": "FFFFFF", "text_on_light": "0A0A0A" },
+    "chanel": { "name": "Chanel", "primary": "1A1A1A", "secondary": "FFFFFF", "dark_bg": "1A1A1A", "light_bg": "F8F8F8", "accent": "C4A77D", "text_on_dark": "FFFFFF", "text_on_light": "1A1A1A" },
+    "hermes": { "name": "Hermès", "primary": "E8611A", "secondary": "1A1A1A", "dark_bg": "3D1C02", "light_bg": "FAF5EE", "accent": "D4A574", "text_on_dark": "FFFFFF", "text_on_light": "3D1C02" },
+    "coach": { "name": "Coach", "primary": "8B0000", "secondary": "D4A853", "dark_bg": "2A0000", "light_bg": "FAF8F5", "accent": "C19A6B", "text_on_dark": "FFFFFF", "text_on_light": "2A0000" },
+    "pandora": { "name": "Pandora", "primary": "4A1942", "secondary": "C7A96A", "dark_bg": "2A0A26", "light_bg": "FAF8F5", "accent": "C48DB8", "text_on_dark": "FFFFFF", "text_on_light": "2A0A26" },
+    "neutral": { "name": "中性專業", "primary": "1E3A5F", "secondary": "C8A951", "dark_bg": "1E3A5F", "light_bg": "F4F6F9", "accent": "BFA06A", "text_on_dark": "FFFFFF", "text_on_light": "1E3A5F" }
+  }
+}

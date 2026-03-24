@@ -1,2 +1,32 @@
 node_modules/
 .DS_Store
+Thumbs.db
+
+# Environment & Secrets
+.env
+.env.*
+*.key
+*.pem
+*.p12
+credentials.json
+client_secret*.json
+*token*.json
+*secret*.json
+
+# OAuth
+google-token.json
+
+# Package lock
+package-lock.json
+
+# Build
+dist/
+build/
+
+# OS
+~$*
+*.swp
+*.swo
+
+# Run data (large files, keep in ~/.fontrends/)
+runs/

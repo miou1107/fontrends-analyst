@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["brand", "purpose"],
+  "properties": {
+    "brand": { "type": "string", "minLength": 1 },
+    "competitor": { "type": "string" },
+    "purpose": { "type": "string", "enum": ["sell-venue", "brand-review", "competitive-analysis", "market-entry", "prove-partnership-value"] },
+    "venue": { "type": "string" },
+    "audience": { "type": "string" },
+    "sources": {
+      "type": "object",
+      "properties": {
+        "looker_studio": { "type": "string" },
+        "ga4": { "type": "string" },
+        "gsc": { "type": "string" },
+        "google_trends": { "type": "boolean" }
+      }
+    },
+    "output_format": { "type": "string", "enum": ["pptx", "gslides", "gdocs"] },
+    "language": { "type": "string", "default": "zh-TW" }
+  }
+}

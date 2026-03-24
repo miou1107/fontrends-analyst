@@ -1,0 +1,29 @@
+{
+  "name": "fontrends-core",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/miou1107/fontrends-analyst-core.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/miou1107/fontrends-analyst-core/issues"
+  },
+  "homepage": "https://github.com/miou1107/fontrends-analyst-core#readme",
+  "dependencies": {
+    "ajv": "^8.18.0",
+    "googleapis": "^171.4.0",
+    "pptxgenjs": "^4.0.1"
+  },
+  "devDependencies": {
+    "jest": "^30.3.0"
+  }
+}

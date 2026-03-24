@@ -1,0 +1,19 @@
+{
+  "name": "full-13",
+  "description": "完整 13 頁品牌分析報告",
+  "pages": [
+    { "pageId": "cover", "title": "封面", "background": "dark", "elements": ["brand_name", "subtitle", "period", "credit"] },
+    { "pageId": "summary", "title": "執行摘要", "background": "light", "elements": ["bullet_list"] },
+    { "pageId": "kpi", "title": "社群總覽 KPI", "background": "light", "elements": ["kpi_cards", "comparison_note"] },
+    { "pageId": "trend", "title": "聲量趨勢分析", "background": "light", "elements": ["table", "insight_note"] },
+    { "pageId": "language", "title": "語系分布", "background": "light", "elements": ["bar_chart", "insight_column", "table"] },
+    { "pageId": "platform", "title": "平台聲量分析", "background": "light", "elements": ["table", "insight_note"] },
+    { "pageId": "kol", "title": "KOL 影響力排行", "background": "light", "elements": ["table", "insight_note"] },
+    { "pageId": "sentiment", "title": "好感度分析", "background": "light", "elements": ["bar_chart", "comparison_table", "insight_note", "disclaimer"] },
+    { "pageId": "venue", "title": "品牌 × 場域關聯", "background": "light", "elements": ["structured_text"] },
+    { "pageId": "validation", "title": "外部驗證 & 季節性分析", "background": "light", "elements": ["table", "validation_note"] },
+    { "pageId": "competitor", "title": "競品比較", "background": "light", "elements": ["table", "insight_note"] },
+    { "pageId": "actions", "title": "行動建議", "background": "light", "elements": ["table"] },
+    { "pageId": "closing", "title": "結語", "background": "dark", "elements": ["thank_you", "next_steps", "footer"] }
+  ]
+}
