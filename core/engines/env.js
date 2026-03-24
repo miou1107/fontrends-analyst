@@ -1,75 +1,142 @@
 'use strict';
 
 /**
- * env.js — 統一環境變數載入
+ * env.js — 統一設定載入
  *
- * 載入順序（後者覆蓋前者）：
- * 1. 專案 .env 檔（fontrends-analyst/.env）
- * 2. ~/.fontrends/config.json（向後相容）
- * 3. 系統環境變數（最高優先）
+ * 三層設定來源（後者覆蓋前者）：
+ * 1. fontrends.config.json — 專案行為設定（進 git，大家共用）
+ * 2. .env — 機敏資訊 credentials（不進 git）
+ * 3. ~/.fontrends/config.json — 向後相容
+ * 4. 系統環境變數（最高優先）
  */
 
 const fs = require('fs');
 const path = require('path');
 
-// 載入 .env
 const projectRoot = path.resolve(__dirname, '..', '..');
+
+// 1. 載入 fontrends.config.json（專案行為設定）
+const configFilePath = path.join(projectRoot, 'fontrends.config.json');
+let projectConfig = {};
+try { projectConfig = JSON.parse(fs.readFileSync(configFilePath, 'utf8')); } catch (_) {}
+
+// 2. 載入 .env（credentials）
 const envPath = path.join(projectRoot, '.env');
 if (fs.existsSync(envPath)) {
   require('dotenv').config({ path: envPath });
 }
 
-// 向後相容：讀 ~/.fontrends/config.json 補齊缺少的 env
-const configPath = path.join(process.env.HOME, '.fontrends', 'config.json');
+// 3. 向後相容：~/.fontrends/config.json
+const legacyConfigPath = path.join(process.env.HOME, '.fontrends', 'config.json');
 let legacyConfig = {};
-try { legacyConfig = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch (_) {}
+try { legacyConfig = JSON.parse(fs.readFileSync(legacyConfigPath, 'utf8')); } catch (_) {}
 
 /**
- * 取得設定值。優先順序：env > config.json > default
+ * 用 dot path 從物件取值
  */
-function getConfig(key, legacyPath, defaultValue) {
-  // 1. 環境變數
-  if (process.env[key]) return process.env[key];
-
-  // 2. config.json 用 dot path 取值
-  if (legacyPath && legacyConfig) {
-    const parts = legacyPath.split('.');
-    let val = legacyConfig;
-    for (const p of parts) {
-      val = val?.[p];
-    }
-    if (val !== undefined && val !== null) return val;
+function getByPath(obj, dotPath) {
+  if (!obj || !dotPath) return undefined;
+  const parts = dotPath.split('.');
+  let val = obj;
+  for (const p of parts) {
+    val = val?.[p];
   }
+  return val !== undefined && val !== null ? val : undefined;
+}
 
-  // 3. 預設值
+/**
+ * 取得設定值。優先順序：env var > .env > legacy config.json > project config > default
+ */
+function getConfig(envKey, legacyPath, configPath, defaultValue) {
+  if (process.env[envKey]) return process.env[envKey];
+  if (legacyPath) { const v = getByPath(legacyConfig, legacyPath); if (v !== undefined) return v; }
+  if (configPath) { const v = getByPath(projectConfig, configPath); if (v !== undefined) return v; }
   return defaultValue;
 }
 
 // ══════════════════════════════════════════════════════
-// 匯出所有設定
+// Credentials（從 .env 或 legacy config.json）
 // ══════════════════════════════════════════════════════
 
+const DATAFORSEO_LOGIN = getConfig('DATAFORSEO_LOGIN', 'dataforseo.login', null, '');
+const DATAFORSEO_PASSWORD = getConfig('DATAFORSEO_PASSWORD', 'dataforseo.password', null, '');
+
+const GOOGLE_CREDENTIALS_PATH = getConfig('GOOGLE_CREDENTIALS_PATH', 'google_credentials_path', null,
+  path.join(process.env.HOME, '.fontrends', 'google-credentials.json'));
+const GOOGLE_TOKEN_PATH = getConfig('GOOGLE_TOKEN_PATH', 'google_token_path', null,
+  path.join(process.env.HOME, '.fontrends', 'google-token.json'));
+
+const DATAMINING_HOST = getConfig('DATAMINING_HOST', 'datamining_server.host', null, '');
+const DATAMINING_USER = getConfig('DATAMINING_USER', 'datamining_server.user', null, '');
+const DATAMINING_PASSWORD = getConfig('DATAMINING_PASSWORD', 'datamining_server.password', null, '');
+
+// ══════════════════════════════════════════════════════
+// 專案行為設定（從 fontrends.config.json）
+// ══════════════════════════════════════════════════════
+
+// 地區
+const DEFAULT_LOCATION = getConfig('DEFAULT_LOCATION', null, 'region.default_location', 'Taiwan');
+const DEFAULT_LANGUAGE = getConfig('DEFAULT_LANGUAGE', null, 'region.default_language', 'Chinese (Traditional)');
+
+// 報告
+const DEFAULT_SCHEMA = getConfig('DEFAULT_SCHEMA', null, 'report.default_schema', 'full-13');
+const DEFAULT_OUTPUT_FORMATS = projectConfig.report?.default_output_formats || ['gdocs', 'gslides'];
+const GOOGLE_DRIVE_FOLDER_NAME = getConfig('GOOGLE_DRIVE_FOLDER_NAME', null, 'report.google_drive_folder_name', 'FonTrends_AutoReport');
+
+// OAuth
+const OAUTH_CALLBACK_PORT = parseInt(getConfig('OAUTH_CALLBACK_PORT', null, 'oauth.oauth_callback_port', '3000'), 10);
+
+// 路徑
+const RUNS_DIRECTORY = getConfig('RUNS_DIRECTORY', null, 'paths.runs_directory',
+  path.join(process.env.HOME, '.fontrends', 'runs'));
+const SCREENSHOTS_SUBDIRECTORY = getConfig('SCREENSHOTS_SUBDIRECTORY', null, 'paths.screenshots_subdirectory', 'screenshots');
+
+// DataForSEO API
+const DATAFORSEO_API_BASE_HOSTNAME = getConfig('DATAFORSEO_API_BASE_HOSTNAME', null, 'dataforseo_api.api_base_hostname', 'api.dataforseo.com');
+const DATAFORSEO_NEWS_SEARCH_DEPTH = parseInt(getConfig('DATAFORSEO_NEWS_SEARCH_DEPTH', null, 'dataforseo_api.news_search_depth', '10'), 10);
+const DATAFORSEO_KEYWORD_QUERY_LIMIT = parseInt(getConfig('DATAFORSEO_KEYWORD_QUERY_LIMIT', null, 'dataforseo_api.keyword_query_limit', '50'), 10);
+const DATAFORSEO_RELATED_KEYWORD_LIMIT = parseInt(getConfig('DATAFORSEO_RELATED_KEYWORD_LIMIT', null, 'dataforseo_api.related_keyword_limit', '30'), 10);
+
+// 品質審核
+const AUDIT_MINIMUM_CHAPTER_COUNT = parseInt(getConfig('AUDIT_MINIMUM_CHAPTER_COUNT', null, 'quality_audit.minimum_chapter_count', '5'), 10);
+const AUDIT_ENABLE_EMPTY_TALK_DETECTION = getConfig('AUDIT_ENABLE_EMPTY_TALK_DETECTION', null, 'quality_audit.enable_empty_talk_detection', true);
+const AUDIT_PASSING_SCORE_THRESHOLD = parseInt(getConfig('AUDIT_PASSING_SCORE_THRESHOLD', null, 'quality_audit.passing_score_threshold', '70'), 10);
+
+// 瀏覽器擷取
+const PAGE_LOAD_WAIT_SECONDS = parseInt(getConfig('PAGE_LOAD_WAIT_SECONDS', null, 'browser_extraction.page_load_wait_seconds', '10'), 10);
+const FILTER_APPLY_WAIT_SECONDS = parseInt(getConfig('FILTER_APPLY_WAIT_SECONDS', null, 'browser_extraction.filter_apply_wait_seconds', '4'), 10);
+const PREFER_READONLY_ACCOUNT = getConfig('PREFER_READONLY_ACCOUNT', null, 'browser_extraction.prefer_readonly_account', true);
+const READONLY_ACCOUNT_PATH = getConfig('READONLY_ACCOUNT_PATH', null, 'browser_extraction.readonly_account_path', '/u/0/');
+
+// ══════════════════════════════════════════════════════
 module.exports = {
-  // DataForSEO
-  DATAFORSEO_LOGIN: getConfig('DATAFORSEO_LOGIN', 'dataforseo.login', ''),
-  DATAFORSEO_PASSWORD: getConfig('DATAFORSEO_PASSWORD', 'dataforseo.password', ''),
+  // Credentials
+  DATAFORSEO_LOGIN, DATAFORSEO_PASSWORD,
+  GOOGLE_CREDENTIALS_PATH, GOOGLE_TOKEN_PATH,
+  DATAMINING_HOST, DATAMINING_USER, DATAMINING_PASSWORD,
 
-  // Google OAuth
-  GOOGLE_CREDENTIALS_PATH: getConfig('GOOGLE_CREDENTIALS_PATH', 'google_credentials_path',
-    path.join(process.env.HOME, '.fontrends', 'google-credentials.json')),
-  GOOGLE_TOKEN_PATH: getConfig('GOOGLE_TOKEN_PATH', 'google_token_path',
-    path.join(process.env.HOME, '.fontrends', 'google-token.json')),
+  // 地區
+  DEFAULT_LOCATION, DEFAULT_LANGUAGE,
 
-  // SSH
-  DATAMINING_HOST: getConfig('DATAMINING_HOST', 'datamining_server.host', ''),
-  DATAMINING_USER: getConfig('DATAMINING_USER', 'datamining_server.user', ''),
-  DATAMINING_PASSWORD: getConfig('DATAMINING_PASSWORD', 'datamining_server.password', ''),
+  // 報告
+  DEFAULT_SCHEMA, DEFAULT_OUTPUT_FORMATS, GOOGLE_DRIVE_FOLDER_NAME,
 
-  // Paths
-  FONTRENDS_RUNS_DIR: getConfig('FONTRENDS_RUNS_DIR', null,
-    path.join(process.env.HOME, '.fontrends', 'runs')),
-  FONTRENDS_DRIVE_FOLDER: getConfig('FONTRENDS_DRIVE_FOLDER', null, 'FonTrends_AutoReport'),
-  OAUTH_CALLBACK_PORT: parseInt(getConfig('OAUTH_CALLBACK_PORT', null, '3000'), 10),
+  // OAuth
+  OAUTH_CALLBACK_PORT,
+
+  // 路徑
+  RUNS_DIRECTORY, SCREENSHOTS_SUBDIRECTORY,
+
+  // DataForSEO API
+  DATAFORSEO_API_BASE_HOSTNAME, DATAFORSEO_NEWS_SEARCH_DEPTH,
+  DATAFORSEO_KEYWORD_QUERY_LIMIT, DATAFORSEO_RELATED_KEYWORD_LIMIT,
+
+  // 品質審核
+  AUDIT_MINIMUM_CHAPTER_COUNT, AUDIT_ENABLE_EMPTY_TALK_DETECTION, AUDIT_PASSING_SCORE_THRESHOLD,
+
+  // 瀏覽器擷取
+  PAGE_LOAD_WAIT_SECONDS, FILTER_APPLY_WAIT_SECONDS,
+  PREFER_READONLY_ACCOUNT, READONLY_ACCOUNT_PATH,
 
   // Helper
   getConfig,

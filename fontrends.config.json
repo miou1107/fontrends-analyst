@@ -1,0 +1,35 @@
+{
+  "region": {
+    "default_location": "Taiwan",
+    "default_language": "Chinese (Traditional)"
+  },
+  "report": {
+    "default_schema": "full-13",
+    "default_output_formats": ["gdocs", "gslides"],
+    "google_drive_folder_name": "FonTrends_AutoReport"
+  },
+  "oauth": {
+    "oauth_callback_port": 3000
+  },
+  "paths": {
+    "runs_directory": "~/.fontrends/runs",
+    "screenshots_subdirectory": "screenshots"
+  },
+  "dataforseo_api": {
+    "api_base_hostname": "api.dataforseo.com",
+    "news_search_depth": 10,
+    "keyword_query_limit": 50,
+    "related_keyword_limit": 30
+  },
+  "quality_audit": {
+    "minimum_chapter_count": 5,
+    "enable_empty_talk_detection": true,
+    "passing_score_threshold": 70
+  },
+  "browser_extraction": {
+    "page_load_wait_seconds": 10,
+    "filter_apply_wait_seconds": 4,
+    "prefer_readonly_account": true,
+    "readonly_account_path": "/u/0/"
+  }
+}
