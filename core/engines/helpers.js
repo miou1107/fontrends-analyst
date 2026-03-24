@@ -106,25 +106,10 @@ function writeJSON(filePath, data) {
 
 const DRIVE_FULL_SCOPE = 'https://www.googleapis.com/auth/drive';
 
-// OAuth paths: configurable via env vars, ~/.fontrends/config.json, or hardcoded defaults
-function resolveOAuthPaths() {
-  const home = process.env.HOME;
-  const configPath = path.join(home, '.fontrends', 'config.json');
-  let config = {};
-  try { config = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch (_) {}
-
-  return {
-    tokenPath: process.env.FONTRENDS_TOKEN_PATH
-      || config.google_token_path
-      || path.join(home, '.fontrends', 'google-token.json'),
-    credentialsPath: process.env.FONTRENDS_CREDENTIALS_PATH
-      || config.google_credentials_path
-      || path.join(home, 'Downloads',
-        'client_secret_1095596038837-vckg8l9pheilrjpa3cj0bgkdpooa7pbj.apps.googleusercontent.com.json'),
-  };
-}
-
-const { tokenPath: TOKEN_PATH, credentialsPath: CREDENTIALS_PATH } = resolveOAuthPaths();
+// OAuth paths: from env.js (reads .env > config.json > defaults)
+const env = require('./env');
+const TOKEN_PATH = env.GOOGLE_TOKEN_PATH;
+const CREDENTIALS_PATH = env.GOOGLE_CREDENTIALS_PATH;
 
 /**
  * Get authenticated Google OAuth2 client

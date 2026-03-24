@@ -4,27 +4,22 @@
  * dataforseo-client.js — DataForSEO API Client
  *
  * Handles authentication, request/response, rate limiting, and error handling.
- * Reads credentials from ~/.fontrends/config.json
+ * Reads credentials from .env > config.json > env vars
  */
 
 const https = require('https');
-const path = require('path');
-const fs = require('fs');
-
-const CONFIG_PATH = path.join(process.env.HOME, '.fontrends', 'config.json');
+const env = require('../env');
 
 /**
- * Load DataForSEO credentials from config.json
+ * Load DataForSEO credentials from env.js
  */
 function loadCredentials() {
-  try {
-    const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    const { login, password } = config.dataforseo || {};
-    if (!login || !password) throw new Error('Missing dataforseo.login or dataforseo.password');
-    return { login, password };
-  } catch (e) {
-    throw new Error(`Cannot load DataForSEO credentials from ${CONFIG_PATH}: ${e.message}`);
+  const login = env.DATAFORSEO_LOGIN;
+  const password = env.DATAFORSEO_PASSWORD;
+  if (!login || !password) {
+    throw new Error('Missing DATAFORSEO_LOGIN or DATAFORSEO_PASSWORD in .env or config.json');
   }
+  return { login, password };
 }
 
 /**

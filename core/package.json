@@ -20,6 +20,7 @@
   "homepage": "https://github.com/miou1107/fontrends-analyst-core#readme",
   "dependencies": {
     "ajv": "^8.18.0",
+    "dotenv": "^17.3.1",
     "googleapis": "^171.4.0",
     "pptxgenjs": "^4.0.1"
   },

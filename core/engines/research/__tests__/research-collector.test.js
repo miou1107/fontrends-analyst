@@ -1,30 +1,61 @@
 'use strict';
 
-const { collectResearch } = require('../research-collector');
+const path = require('path');
+const fs = require('fs');
+const os = require('os');
+const { classifyIntents } = require('../research-collector');
 
-describe('research-collector (skeleton)', () => {
-  test('returns stub structure with brand and competitor', async () => {
-    const result = await collectResearch('Louis Vuitton', 'Gucci', '2025-03 ~ 2026-03');
-    expect(result.brand).toBe('Louis Vuitton');
-    expect(result.competitor).toBe('Gucci');
-    expect(result.period).toBe('2025-03 ~ 2026-03');
+describe('classifyIntents', () => {
+  test('classifies shopping keywords', () => {
+    const result = classifyIntents([
+      { keyword: 'brand 包包' },
+      { keyword: 'brand 價格' },
+      { keyword: 'brand 哪裡買' },
+    ]);
+    expect(result.shopping.count).toBe(3);
   });
 
-  test('returns status=stub and empty sources/events', async () => {
-    const result = await collectResearch('TestBrand', 'TestComp', '2026-01');
-    expect(result.status).toBe('stub');
-    expect(result.sources).toEqual([]);
-    expect(result.events).toEqual([]);
+  test('classifies info keywords', () => {
+    const result = classifyIntents([
+      { keyword: 'brand 設計師是誰' },
+      { keyword: 'brand 發音' },
+    ]);
+    expect(result.info.count).toBe(2);
   });
 
-  test('includes generated_at timestamp', async () => {
-    const result = await collectResearch('X', 'Y', 'Z');
-    expect(result.generated_at).toBeDefined();
-    expect(new Date(result.generated_at).getTime()).not.toBeNaN();
+  test('classifies navigation keywords', () => {
+    const result = classifyIntents([
+      { keyword: 'brand 官網' },
+      { keyword: 'brand 台北101' },
+    ]);
+    expect(result.navigation.count).toBe(2);
   });
 
-  test('includes message about stub status', async () => {
-    const result = await collectResearch('A', 'B', 'C');
-    expect(result.message).toContain('skeleton');
+  test('classifies comparison keywords', () => {
+    const result = classifyIntents([
+      { keyword: 'brand vs competitor' },
+      { keyword: 'brand 評價' },
+    ]);
+    expect(result.comparison.count).toBe(2);
+  });
+
+  test('puts unclassified into other', () => {
+    const result = classifyIntents([
+      { keyword: 'brand' },
+      { keyword: 'brand fr' },
+    ]);
+    expect(result.other.count).toBe(2);
+  });
+
+  test('limits keywords per intent to 5', () => {
+    const keywords = Array.from({ length: 10 }, (_, i) => ({ keyword: `brand 包${i}` }));
+    const result = classifyIntents(keywords);
+    expect(result.shopping.keywords.length).toBeLessThanOrEqual(5);
+  });
+
+  test('handles empty input', () => {
+    const result = classifyIntents([]);
+    expect(result.shopping.count).toBe(0);
+    expect(result.other.count).toBe(0);
   });
 });
