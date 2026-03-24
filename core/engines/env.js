@@ -3,11 +3,10 @@
 /**
  * env.js — 統一設定載入
  *
- * 三層設定來源（後者覆蓋前者）：
+ * 兩層設定來源：
  * 1. fontrends.config.json — 專案行為設定（進 git，大家共用）
  * 2. .env — 機敏資訊 credentials（不進 git）
- * 3. ~/.fontrends/config.json — 向後相容
- * 4. 系統環境變數（最高優先）
+ * 系統環境變數可覆蓋一切（最高優先）
  */
 
 const fs = require('fs');
@@ -26,11 +25,6 @@ if (fs.existsSync(envPath)) {
   require('dotenv').config({ path: envPath });
 }
 
-// 3. 向後相容：~/.fontrends/config.json
-const legacyConfigPath = path.join(process.env.HOME, '.fontrends', 'config.json');
-let legacyConfig = {};
-try { legacyConfig = JSON.parse(fs.readFileSync(legacyConfigPath, 'utf8')); } catch (_) {}
-
 /**
  * 用 dot path 從物件取值
  */
@@ -45,68 +39,67 @@ function getByPath(obj, dotPath) {
 }
 
 /**
- * 取得設定值。優先順序：env var > .env > legacy config.json > project config > default
+ * 取得設定值。優先順序：env var > .env > fontrends.config.json > default
  */
-function getConfig(envKey, legacyPath, configPath, defaultValue) {
+function getConfig(envKey, configPath, defaultValue) {
   if (process.env[envKey]) return process.env[envKey];
-  if (legacyPath) { const v = getByPath(legacyConfig, legacyPath); if (v !== undefined) return v; }
   if (configPath) { const v = getByPath(projectConfig, configPath); if (v !== undefined) return v; }
   return defaultValue;
 }
 
 // ══════════════════════════════════════════════════════
-// Credentials（從 .env 或 legacy config.json）
+// Credentials（從 .env）
 // ══════════════════════════════════════════════════════
 
-const DATAFORSEO_LOGIN = getConfig('DATAFORSEO_LOGIN', 'dataforseo.login', null, '');
-const DATAFORSEO_PASSWORD = getConfig('DATAFORSEO_PASSWORD', 'dataforseo.password', null, '');
+const DATAFORSEO_LOGIN = getConfig('DATAFORSEO_LOGIN', null, '');
+const DATAFORSEO_PASSWORD = getConfig('DATAFORSEO_PASSWORD', null, '');
 
-const GOOGLE_CREDENTIALS_PATH = getConfig('GOOGLE_CREDENTIALS_PATH', 'google_credentials_path', null,
+const GOOGLE_CREDENTIALS_PATH = getConfig('GOOGLE_CREDENTIALS_PATH', null,
   path.join(process.env.HOME, '.fontrends', 'google-credentials.json'));
-const GOOGLE_TOKEN_PATH = getConfig('GOOGLE_TOKEN_PATH', 'google_token_path', null,
+const GOOGLE_TOKEN_PATH = getConfig('GOOGLE_TOKEN_PATH', null,
   path.join(process.env.HOME, '.fontrends', 'google-token.json'));
 
-const DATAMINING_HOST = getConfig('DATAMINING_HOST', 'datamining_server.host', null, '');
-const DATAMINING_USER = getConfig('DATAMINING_USER', 'datamining_server.user', null, '');
-const DATAMINING_PASSWORD = getConfig('DATAMINING_PASSWORD', 'datamining_server.password', null, '');
+const DATAMINING_HOST = getConfig('DATAMINING_HOST', null, '');
+const DATAMINING_USER = getConfig('DATAMINING_USER', null, '');
+const DATAMINING_PASSWORD = getConfig('DATAMINING_PASSWORD', null, '');
 
 // ══════════════════════════════════════════════════════
 // 專案行為設定（從 fontrends.config.json）
 // ══════════════════════════════════════════════════════
 
 // 地區
-const DEFAULT_LOCATION = getConfig('DEFAULT_LOCATION', null, 'region.default_location', 'Taiwan');
-const DEFAULT_LANGUAGE = getConfig('DEFAULT_LANGUAGE', null, 'region.default_language', 'Chinese (Traditional)');
+const DEFAULT_LOCATION = getConfig('DEFAULT_LOCATION', 'region.default_location', 'Taiwan');
+const DEFAULT_LANGUAGE = getConfig('DEFAULT_LANGUAGE', 'region.default_language', 'Chinese (Traditional)');
 
 // 報告
-const DEFAULT_SCHEMA = getConfig('DEFAULT_SCHEMA', null, 'report.default_schema', 'full-13');
+const DEFAULT_SCHEMA = getConfig('DEFAULT_SCHEMA', 'report.default_schema', 'full-13');
 const DEFAULT_OUTPUT_FORMATS = projectConfig.report?.default_output_formats || ['gdocs', 'gslides'];
-const GOOGLE_DRIVE_FOLDER_NAME = getConfig('GOOGLE_DRIVE_FOLDER_NAME', null, 'report.google_drive_folder_name', 'FonTrends_AutoReport');
+const GOOGLE_DRIVE_FOLDER_NAME = getConfig('GOOGLE_DRIVE_FOLDER_NAME', 'report.google_drive_folder_name', 'FonTrends_AutoReport');
 
 // OAuth
-const OAUTH_CALLBACK_PORT = parseInt(getConfig('OAUTH_CALLBACK_PORT', null, 'oauth.oauth_callback_port', '3000'), 10);
+const OAUTH_CALLBACK_PORT = parseInt(getConfig('OAUTH_CALLBACK_PORT', 'oauth.oauth_callback_port', '3000'), 10);
 
 // 路徑
-const RUNS_DIRECTORY = getConfig('RUNS_DIRECTORY', null, 'paths.runs_directory',
+const RUNS_DIRECTORY = getConfig('RUNS_DIRECTORY', 'paths.runs_directory',
   path.join(process.env.HOME, '.fontrends', 'runs'));
-const SCREENSHOTS_SUBDIRECTORY = getConfig('SCREENSHOTS_SUBDIRECTORY', null, 'paths.screenshots_subdirectory', 'screenshots');
+const SCREENSHOTS_SUBDIRECTORY = getConfig('SCREENSHOTS_SUBDIRECTORY', 'paths.screenshots_subdirectory', 'screenshots');
 
 // DataForSEO API
-const DATAFORSEO_API_BASE_HOSTNAME = getConfig('DATAFORSEO_API_BASE_HOSTNAME', null, 'dataforseo_api.api_base_hostname', 'api.dataforseo.com');
-const DATAFORSEO_NEWS_SEARCH_DEPTH = parseInt(getConfig('DATAFORSEO_NEWS_SEARCH_DEPTH', null, 'dataforseo_api.news_search_depth', '10'), 10);
-const DATAFORSEO_KEYWORD_QUERY_LIMIT = parseInt(getConfig('DATAFORSEO_KEYWORD_QUERY_LIMIT', null, 'dataforseo_api.keyword_query_limit', '50'), 10);
-const DATAFORSEO_RELATED_KEYWORD_LIMIT = parseInt(getConfig('DATAFORSEO_RELATED_KEYWORD_LIMIT', null, 'dataforseo_api.related_keyword_limit', '30'), 10);
+const DATAFORSEO_API_BASE_HOSTNAME = getConfig('DATAFORSEO_API_BASE_HOSTNAME', 'dataforseo_api.api_base_hostname', 'api.dataforseo.com');
+const DATAFORSEO_NEWS_SEARCH_DEPTH = parseInt(getConfig('DATAFORSEO_NEWS_SEARCH_DEPTH', 'dataforseo_api.news_search_depth', '10'), 10);
+const DATAFORSEO_KEYWORD_QUERY_LIMIT = parseInt(getConfig('DATAFORSEO_KEYWORD_QUERY_LIMIT', 'dataforseo_api.keyword_query_limit', '50'), 10);
+const DATAFORSEO_RELATED_KEYWORD_LIMIT = parseInt(getConfig('DATAFORSEO_RELATED_KEYWORD_LIMIT', 'dataforseo_api.related_keyword_limit', '30'), 10);
 
 // 品質審核
-const AUDIT_MINIMUM_CHAPTER_COUNT = parseInt(getConfig('AUDIT_MINIMUM_CHAPTER_COUNT', null, 'quality_audit.minimum_chapter_count', '5'), 10);
-const AUDIT_ENABLE_EMPTY_TALK_DETECTION = getConfig('AUDIT_ENABLE_EMPTY_TALK_DETECTION', null, 'quality_audit.enable_empty_talk_detection', true);
-const AUDIT_PASSING_SCORE_THRESHOLD = parseInt(getConfig('AUDIT_PASSING_SCORE_THRESHOLD', null, 'quality_audit.passing_score_threshold', '70'), 10);
+const AUDIT_MINIMUM_CHAPTER_COUNT = parseInt(getConfig('AUDIT_MINIMUM_CHAPTER_COUNT', 'quality_audit.minimum_chapter_count', '5'), 10);
+const AUDIT_ENABLE_EMPTY_TALK_DETECTION = getConfig('AUDIT_ENABLE_EMPTY_TALK_DETECTION', 'quality_audit.enable_empty_talk_detection', true);
+const AUDIT_PASSING_SCORE_THRESHOLD = parseInt(getConfig('AUDIT_PASSING_SCORE_THRESHOLD', 'quality_audit.passing_score_threshold', '70'), 10);
 
 // 瀏覽器擷取
-const PAGE_LOAD_WAIT_SECONDS = parseInt(getConfig('PAGE_LOAD_WAIT_SECONDS', null, 'browser_extraction.page_load_wait_seconds', '10'), 10);
-const FILTER_APPLY_WAIT_SECONDS = parseInt(getConfig('FILTER_APPLY_WAIT_SECONDS', null, 'browser_extraction.filter_apply_wait_seconds', '4'), 10);
-const PREFER_READONLY_ACCOUNT = getConfig('PREFER_READONLY_ACCOUNT', null, 'browser_extraction.prefer_readonly_account', true);
-const READONLY_ACCOUNT_PATH = getConfig('READONLY_ACCOUNT_PATH', null, 'browser_extraction.readonly_account_path', '/u/0/');
+const PAGE_LOAD_WAIT_SECONDS = parseInt(getConfig('PAGE_LOAD_WAIT_SECONDS', 'browser_extraction.page_load_wait_seconds', '10'), 10);
+const FILTER_APPLY_WAIT_SECONDS = parseInt(getConfig('FILTER_APPLY_WAIT_SECONDS', 'browser_extraction.filter_apply_wait_seconds', '4'), 10);
+const PREFER_READONLY_ACCOUNT = getConfig('PREFER_READONLY_ACCOUNT', 'browser_extraction.prefer_readonly_account', true);
+const READONLY_ACCOUNT_PATH = getConfig('READONLY_ACCOUNT_PATH', 'browser_extraction.readonly_account_path', '/u/0/');
 
 // ══════════════════════════════════════════════════════
 module.exports = {
