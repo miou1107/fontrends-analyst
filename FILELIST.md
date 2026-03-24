@@ -29,7 +29,7 @@ fontrends-analyst/
 | `~/.fontrends/runs/` | Run 數據（interview.json, data.json, narrative.json, screenshots/） |
 | `~/.fontrends/google-token.json` | Google OAuth Token |
 | `~/.fontrends/manager-record.json` | Manager 記過紀錄 |
-| `/tmp/fontrends-core/` | 舊路徑（已搬到本 repo core/，但部分 script 仍引用此路徑） |
+| `~/SourceCode/Work/fontrends-analyst/core/` | 舊路徑（已搬到本 repo core/，但部分 script 仍引用此路徑） |
 
 ---
 

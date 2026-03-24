@@ -16,31 +16,31 @@ description: |
 - 如不存在 → 提示用戶執行 `bash setup.sh`，終止
 
 ### Step 2: 拉取最新知識庫
-- 如 `/tmp/fontrends-core/.git` 存在 → `git -C /tmp/fontrends-core pull --quiet`
-- 如不存在 → `git clone https://$(cat ~/.fontrends/token)@github.com/miou1107/fontrends-analyst-core.git /tmp/fontrends-core`
+- 如 `~/SourceCode/Work/fontrends-analyst/core/.git` 存在 → `git -C ~/SourceCode/Work/fontrends-analyst/core pull --quiet`
+- 如不存在 → `git clone https://$(cat ~/.fontrends/token)@github.com/miou1107/fontrends-analyst-core.git ~/SourceCode/Work/fontrends-analyst/core`
 
 ### Step 3: 版本檢查
-- 讀取 `/tmp/fontrends-core/version.json`
+- 讀取 `~/SourceCode/Work/fontrends-analyst/core/version.json`
 - 如 core version < SKILL 要求的 `min_core_version` (1.0.0) → 警告「知識庫版本過舊」
 - 讀取 Public Repo 的最新 tag（`git ls-remote --tags`）→ 如有新版 skill → 提示「Skill 有新版本可用，建議更新」
 - 版本檢查不阻擋執行，只顯示警告
 
 ### Step 4: 載入框架檔案
 依序讀取以下檔案。如某檔案缺失，使用下方 Fallback 內建基礎版，並顯示警告：
-- `/tmp/fontrends-core/frameworks/interview-guide.md`
-- `/tmp/fontrends-core/frameworks/analysis-framework.md`
-- `/tmp/fontrends-core/frameworks/action-matrix.md`
-- `/tmp/fontrends-core/operations/looker-operations.md`
-- `/tmp/fontrends-core/operations/data-extraction.md`
-- `/tmp/fontrends-core/templates/ppt-template.md`
-- `/tmp/fontrends-core/templates/brand-colors.json`
+- `~/SourceCode/Work/fontrends-analyst/core/frameworks/interview-guide.md`
+- `~/SourceCode/Work/fontrends-analyst/core/frameworks/analysis-framework.md`
+- `~/SourceCode/Work/fontrends-analyst/core/frameworks/action-matrix.md`
+- `~/SourceCode/Work/fontrends-analyst/core/operations/looker-operations.md`
+- `~/SourceCode/Work/fontrends-analyst/core/operations/data-extraction.md`
+- `~/SourceCode/Work/fontrends-analyst/core/templates/ppt-template.md`
+- `~/SourceCode/Work/fontrends-analyst/core/templates/brand-colors.json`
 
 ### Step 5: 載入學習紀錄（如有）
-- 讀取 `/tmp/fontrends-core/learned/corrections.jsonl`
+- 讀取 `~/SourceCode/Work/fontrends-analyst/core/learned/corrections.jsonl`
 - 將歷史修正作為分析時的參考
 
 ### Fallback: 網路不可用
-- 如 git 操作失敗但 `/tmp/fontrends-core/` 存在 → 使用離線快取，顯示警告
+- 如 git 操作失敗但 `~/SourceCode/Work/fontrends-analyst/core/` 存在 → 使用離線快取，顯示警告
 - 如完全無快取 → 使用下方內建基礎版，顯示「離線模式，使用內建基礎框架」
 
 ### Fallback: 內建基礎版（檔案缺失或完全離線時使用）

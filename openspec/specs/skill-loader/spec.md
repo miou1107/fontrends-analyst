@@ -38,13 +38,13 @@
 每次 Skill 啟動時 MUST 拉取最新的 Core Repo 內容。
 
 #### Scenario: 首次拉取（無本地快取）
-- **GIVEN** `/tmp/fontrends-core/` 目錄不存在
+- **GIVEN** `~/SourceCode/Work/fontrends-analyst/core/` 目錄不存在
 - **WHEN** Skill 啟動並通過 token 驗證
-- **THEN** 系統執行 `git clone` 將 Core Repo 下載到 `/tmp/fontrends-core/`
+- **THEN** 系統執行 `git clone` 將 Core Repo 下載到 `~/SourceCode/Work/fontrends-analyst/core/`
 - **AND** 讀取 `version.json` 確認版本號
 
 #### Scenario: 已有本地快取，拉取更新
-- **GIVEN** `/tmp/fontrends-core/.git` 目錄存在
+- **GIVEN** `~/SourceCode/Work/fontrends-analyst/core/.git` 目錄存在
 - **WHEN** Skill 啟動
 - **THEN** 系統執行 `git pull --quiet` 更新到最新版
 - **AND** 讀取更新後的 `version.json`

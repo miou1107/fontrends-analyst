@@ -5,6 +5,16 @@
 ### Input
 - `analysis.json` (enriched)：含 insights、swot、purpose_bindings
 - `interview.json`：讀取 `client.knowledge_level`、`proposal.scenario`、`proposal.purpose`
+- `research.json`（optional）：§2 研究蒐集結果，含搜量趨勢、關鍵字列表、長尾字、新聞事件、意圖分類
+
+#### Scenario: 整合 research.json 強化報告
+- **GIVEN** research.json 存在於 run 目錄
+- **WHEN** narrative-packaging 生成章節內容
+- **THEN** 搜尋意圖章節用 `long_tail_keywords` 列出具體產品搜尋字 + `intent_analysis` 意圖比例
+- **AND** 競品比較章節加入 `search_trends` 搜尋量對比（社群 + 搜尋雙維度）
+- **AND** 趨勢歸因用 `news_events` 新聞標題標註高峰事件
+- **AND** 行動建議根據長尾字產品搜量給出精準品項推薦
+- **AND** 如果 research.json 不存在，退回原有行為
 
 ### Output → `narrative.json`
 ```json

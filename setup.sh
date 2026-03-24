@@ -33,8 +33,8 @@ chmod 600 "$TOKEN_FILE"
 # 驗證 token
 echo ""
 echo "驗證 token..."
-if git clone "https://$TOKEN@github.com/miou1107/fontrends-analyst-core.git" /tmp/fontrends-core-test --depth 1 2>/dev/null; then
-  rm -rf /tmp/fontrends-core-test
+if git clone "https://$TOKEN@github.com/miou1107/fontrends-analyst-core.git" ~/SourceCode/Work/fontrends-analyst/core-test --depth 1 2>/dev/null; then
+  rm -rf ~/SourceCode/Work/fontrends-analyst/core-test
   echo "✅ Token 驗證成功！"
   echo ""
   echo "設定完成。在 Claude in Chrome 中啟動 brand-analysis-looker-studio skill 即可使用。"

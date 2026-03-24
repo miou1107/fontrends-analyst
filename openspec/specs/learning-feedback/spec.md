@@ -62,7 +62,7 @@ AI MUST 能識別用戶修改了什麼，並分類修改類型。
 #### Scenario: 寫入 corrections.jsonl
 - **GIVEN** 修改已分類完成
 - **WHEN** AI 寫入學習紀錄
-- **THEN** 以 JSONL 格式 append 到 `/tmp/fontrends-core/learned/corrections.jsonl`
+- **THEN** 以 JSONL 格式 append 到 `~/SourceCode/Work/fontrends-analyst/core/learned/corrections.jsonl`
 - **AND** 每筆紀錄格式：
 
 ```json
@@ -95,7 +95,7 @@ AI MUST 能識別用戶修改了什麼，並分類修改類型。
 - **GIVEN** 學習紀錄已寫入 `learned/corrections.jsonl`
 - **WHEN** AI 完成學習整理
 - **THEN** 執行以下步驟：
-  1. 在 `/tmp/fontrends-core/` 建立新 branch：`learned/[date]-[brand]-[user]`
+  1. 在 `~/SourceCode/Work/fontrends-analyst/core/` 建立新 branch：`learned/[date]-[brand]-[user]`
   2. `git add learned/corrections.jsonl`
   3. `git commit -m "learn: [品牌] [修改類型] by [user]"`
   4. `git push origin [branch]`
