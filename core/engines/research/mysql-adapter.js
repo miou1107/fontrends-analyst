@@ -308,7 +308,49 @@ async function queryTopArticles(conn, brand, startDate, endDate, limit = 20) {
 }
 
 /**
- * 查詢搜尋量數據
+ * 查詢搜量月度趨勢（from search_daily_data，用於 cross-correlation）
+ */
+async function querySearchMonthlyTrend(conn, brand) {
+  const [rows] = await conn.execute(`
+    SELECT
+      DATE_FORMAT(date, '%Y-%m') as month,
+      SUM(search_volume) as total_volume,
+      COUNT(DISTINCT search_keyword) as keyword_count
+    FROM search_daily_data
+    WHERE topic_name = ?
+    GROUP BY DATE_FORMAT(date, '%Y-%m')
+    ORDER BY month
+  `, [brand]);
+
+  return rows.map(r => ({
+    month: r.month,
+    volume: toNum(r.total_volume),
+    keyword_count: toNum(r.keyword_count),
+  }));
+}
+
+/**
+ * 查詢熱門搜尋關鍵字（from search_daily_data）
+ */
+async function queryTopSearchKeywords(conn, brand, limit = 20) {
+  const [rows] = await conn.execute(`
+    SELECT search_keyword, search_volume, intention_code, lang
+    FROM search_daily_data
+    WHERE topic_name = ? AND date = (SELECT MAX(date) FROM search_daily_data WHERE topic_name = ?)
+    ORDER BY search_volume DESC
+    LIMIT ${parseInt(limit, 10)}
+  `, [brand, brand]);
+
+  return rows.map(r => ({
+    keyword: r.search_keyword,
+    volume: toNum(r.search_volume),
+    intent_code: r.intention_code,
+    lang: r.lang,
+  }));
+}
+
+/**
+ * 查詢搜尋量數據（from keyword_volume）
  */
 async function querySearchVolume(conn, brand) {
   const [rows] = await conn.execute(`
@@ -346,7 +388,7 @@ async function extractBrandData(brand, competitor, startDate, endDate) {
     console.log(`[mysql-adapter] 擷取 ${brand} 數據 (${startDate} ~ ${endDate})`);
 
     // 主品牌
-    const [overview, monthly, daily, sentiment, platforms, kols, languages, topArticles, searchVolume] = await Promise.all([
+    const [overview, monthly, daily, sentiment, platforms, kols, languages, topArticles, searchVolume, searchMonthly, topKeywords] = await Promise.all([
       querySocialOverview(connection, brand, startDate, endDate),
       queryMonthlyTrend(connection, brand, startDate, endDate),
       queryDailyTrend(connection, brand, startDate, endDate),
@@ -356,6 +398,8 @@ async function extractBrandData(brand, competitor, startDate, endDate) {
       queryLanguageDistribution(connection, brand, startDate, endDate),
       queryTopArticles(connection, brand, startDate, endDate),
       querySearchVolume(connection, brand),
+      querySearchMonthlyTrend(connection, brand),
+      queryTopSearchKeywords(connection, brand),
     ]);
 
     console.log(`  ✅ ${brand}: ${overview.total_posts} posts, ${overview.author_count} authors`);
@@ -388,6 +432,8 @@ async function extractBrandData(brand, competitor, startDate, endDate) {
         language: { status: 'completed', data: { items: languages } },
         top_articles: { status: 'completed', data: { items: topArticles } },
         search_volume: { status: 'completed', data: { items: searchVolume } },
+        search_monthly_trend: { status: 'completed', data: searchMonthly },
+        top_search_keywords: { status: 'completed', data: { items: topKeywords } },
       },
       competitor_data: competitorData ? {
         brand: competitor, source: 'mysql', status: 'completed',
@@ -431,4 +477,5 @@ module.exports = {
   querySocialOverview, queryMonthlyTrend, queryDailyTrend,
   querySentiment, queryPlatformDistribution, queryTopKOL,
   queryLanguageDistribution, queryTopArticles, querySearchVolume,
+  querySearchMonthlyTrend, queryTopSearchKeywords,
 };

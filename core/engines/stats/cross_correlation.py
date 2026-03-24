@@ -49,11 +49,15 @@ def load_data(run_dir):
             research = json.load(f)
         research_trends = research.get('search_trends', [])
 
+    # DB 搜量月度趨勢（from search_monthly_trend）
+    search_monthly_from_db = data.get('pages', {}).get('search_monthly_trend', {}).get('data', [])
+
     return {
         'social_monthly': social_monthly,
         'social_daily': social_daily,
         'search_items': search_items,
         'research_trends': research_trends,
+        'search_monthly_from_db': search_monthly_from_db,
     }
 
 
@@ -201,11 +205,28 @@ def analyze_correlation(run_dir):
     social_monthly = raw['social_monthly']
     search_monthly = []
 
-    # 從 research_trends 取搜量月度
-    if raw['research_trends']:
-        brand_trend = raw['research_trends'][0] if raw['research_trends'] else None
-        if brand_trend and brand_trend.get('monthly'):
-            search_monthly = brand_trend['monthly']
+    # 從 data.json 取品牌名
+    brand_name = None
+    data_path = os.path.join(run_dir, 'data.json')
+    if os.path.exists(data_path):
+        with open(data_path) as f:
+            brand_name = json.load(f).get('meta', {}).get('brand', '')
+
+    # 優先從 DB search_daily_data 取搜量（月度加總）
+    if raw.get('search_monthly_from_db'):
+        search_monthly = raw['search_monthly_from_db']
+    else:
+        # fallback: 從 research_trends 取（DataForSEO）
+        for trend in raw['research_trends']:
+            kw = trend.get('keyword', '').lower()
+            if brand_name and brand_name.lower() in kw:
+                search_monthly = trend.get('monthly', [])
+                break
+        if not search_monthly and raw['research_trends']:
+            for trend in raw['research_trends']:
+                if trend.get('monthly'):
+                    search_monthly = trend['monthly']
+                    break
 
     results['data_availability'] = {
         'social_monthly_points': len(social_monthly),
@@ -218,7 +239,11 @@ def analyze_correlation(run_dir):
         social_dict = {m['month']: m.get('influence', 0) for m in social_monthly}
         search_dict = {}
         for m in search_monthly:
-            key = f"{m.get('year', '')}-{m.get('month', ''):02d}" if 'year' in m else m.get('month', '')
+            # 支援兩種格式：{month: "2025-03", volume: X} 或 {year: 2025, month: 3, volume: X}
+            if 'year' in m and isinstance(m.get('month'), int):
+                key = f"{m['year']}-{m['month']:02d}"
+            else:
+                key = m.get('month', '')
             search_dict[key] = m.get('volume', m.get('search_volume', 0))
 
         common_months = sorted(set(social_dict.keys()) & set(search_dict.keys()))
