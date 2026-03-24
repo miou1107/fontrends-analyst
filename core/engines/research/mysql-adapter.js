@@ -1,0 +1,375 @@
+'use strict';
+
+/**
+ * mysql-adapter.js — MySQL Database Adapter
+ *
+ * 透過 SSH tunnel 連接 fontrends DB，直接查詢品牌社群數據。
+ * 比 Looker Studio 瀏覽器擷取快 100 倍、精確、無篩選器限制。
+ *
+ * 數據源：test-fontrends.welcometw.com / spots_analytic
+ * 主表：keyword_articles（品牌社群）、search_daily_data（搜尋）、keyword_volume（搜量）
+ */
+
+const { Client } = require('ssh2');
+const mysql = require('mysql2/promise');
+const net = require('net');
+const env = require('../env');
+
+// ══════════════════════════════════════════════════════
+// SSH Tunnel + MySQL Connection
+// ══════════════════════════════════════════════════════
+
+/**
+ * 建立 SSH tunnel 並連接 MySQL
+ * @returns {Promise<{ connection, tunnel, close }>}
+ */
+async function connect() {
+  const sshConfig = {
+    host: env.getConfig('FONTRENDS_DB_HOST', null, 'test-fontrends.welcometw.com'),
+    port: 22,
+    username: env.getConfig('FONTRENDS_DB_SSH_USER', null, 'root'),
+    password: env.getConfig('FONTRENDS_DB_SSH_PASSWORD', null, ''),
+  };
+
+  const dbConfig = {
+    host: '127.0.0.1',
+    user: env.getConfig('FONTRENDS_DB_USER', null, 'fontrip'),
+    password: env.getConfig('FONTRENDS_DB_PASSWORD', null, ''),
+    database: env.getConfig('FONTRENDS_DB_NAME', null, 'spots_analytic'),
+  };
+
+  return new Promise((resolve, reject) => {
+    const ssh = new Client();
+
+    ssh.on('ready', () => {
+      // 建立 TCP tunnel 到 MySQL
+      ssh.forwardOut('127.0.0.1', 0, '127.0.0.1', 3306, async (err, stream) => {
+        if (err) { ssh.end(); return reject(err); }
+
+        try {
+          const connection = await mysql.createConnection({
+            ...dbConfig,
+            stream,
+          });
+
+          resolve({
+            connection,
+            ssh,
+            close: async () => {
+              await connection.end();
+              ssh.end();
+            },
+          });
+        } catch (e) {
+          ssh.end();
+          reject(e);
+        }
+      });
+    });
+
+    ssh.on('error', reject);
+    ssh.connect(sshConfig);
+  });
+}
+
+// ══════════════════════════════════════════════════════
+// High-level Query Methods
+// ══════════════════════════════════════════════════════
+
+/**
+ * 查詢品牌社群總覽 KPI
+ * @param {mysql.Connection} conn
+ * @param {string} brand - e.g., "Dior"
+ * @param {string} startDate - e.g., "2025-03-01"
+ * @param {string} endDate - e.g., "2026-03-01"
+ */
+async function querySocialOverview(conn, brand, startDate, endDate) {
+  const [rows] = await conn.execute(`
+    SELECT
+      COUNT(*) as total_posts,
+      SUM(like_count) as total_likes,
+      SUM(comment_count) as total_comments,
+      SUM(share_count) as total_shares,
+      SUM(like_count + comment_count + share_count) as total_interactions,
+      COUNT(DISTINCT channel_name) as channel_count,
+      COUNT(DISTINCT author) as author_count
+    FROM keyword_articles
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+  `, [brand, startDate, endDate]);
+
+  return rows[0];
+}
+
+/**
+ * 查詢月度趨勢
+ */
+async function queryMonthlyTrend(conn, brand, startDate, endDate) {
+  const [rows] = await conn.execute(`
+    SELECT
+      DATE_FORMAT(post_time, '%Y-%m') as month,
+      COUNT(*) as posts,
+      SUM(like_count) as likes,
+      SUM(comment_count) as comments,
+      SUM(share_count) as shares,
+      SUM(like_count + comment_count + share_count) as interactions
+    FROM keyword_articles
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+    GROUP BY DATE_FORMAT(post_time, '%Y-%m')
+    ORDER BY month
+  `, [brand, startDate, endDate]);
+
+  return rows;
+}
+
+/**
+ * 查詢日度趨勢（用於 cross-correlation）
+ */
+async function queryDailyTrend(conn, brand, startDate, endDate) {
+  const [rows] = await conn.execute(`
+    SELECT
+      DATE(post_time) as date,
+      COUNT(*) as posts,
+      SUM(like_count) as likes,
+      SUM(comment_count) as comments,
+      SUM(share_count) as shares
+    FROM keyword_articles
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+    GROUP BY DATE(post_time)
+    ORDER BY date
+  `, [brand, startDate, endDate]);
+
+  return rows;
+}
+
+/**
+ * 查詢好感度分布
+ */
+async function querySentiment(conn, brand, startDate, endDate) {
+  const [rows] = await conn.execute(`
+    SELECT
+      mood,
+      COUNT(*) as count
+    FROM keyword_articles
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+    GROUP BY mood
+  `, [brand, startDate, endDate]);
+
+  const total = rows.reduce((sum, r) => sum + r.count, 0) || 1;
+  const positive = rows.find(r => r.mood === 1)?.count || 0;
+  const neutral = rows.find(r => r.mood === 0)?.count || 0;
+  const negative = rows.find(r => r.mood === -1)?.count || 0;
+
+  return {
+    positive: +(positive / total * 100).toFixed(1),
+    neutral: +(neutral / total * 100).toFixed(1),
+    negative: +(negative / total * 100).toFixed(1),
+  };
+}
+
+/**
+ * 查詢平台分布
+ */
+async function queryPlatformDistribution(conn, brand, startDate, endDate) {
+  const [rows] = await conn.execute(`
+    SELECT
+      source_name as platform,
+      COUNT(*) as posts,
+      SUM(like_count) as likes,
+      SUM(comment_count) as comments,
+      SUM(share_count) as shares,
+      SUM(like_count + comment_count + share_count) as interactions
+    FROM keyword_articles
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+    GROUP BY source_name
+    ORDER BY interactions DESC
+  `, [brand, startDate, endDate]);
+
+  return rows;
+}
+
+/**
+ * 查詢 KOL 排行
+ */
+async function queryTopKOL(conn, brand, startDate, endDate, limit = 20) {
+  const [rows] = await conn.execute(`
+    SELECT
+      channel_name,
+      author,
+      source_name as platform,
+      COUNT(*) as posts,
+      SUM(like_count) as likes,
+      SUM(comment_count) as comments,
+      SUM(share_count) as shares,
+      SUM(like_count + comment_count + share_count) as interactions
+    FROM keyword_articles
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+    GROUP BY channel_name, author, source_name
+    ORDER BY interactions DESC
+    LIMIT ${parseInt(limit, 10)}
+  `, [brand, startDate, endDate]);
+
+  return rows;
+}
+
+/**
+ * 查詢語系分布
+ */
+async function queryLanguageDistribution(conn, brand, startDate, endDate) {
+  const [rows] = await conn.execute(`
+    SELECT
+      lang,
+      COUNT(*) as posts,
+      SUM(like_count + comment_count + share_count) as interactions
+    FROM keyword_articles
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+    GROUP BY lang
+    ORDER BY interactions DESC
+  `, [brand, startDate, endDate]);
+
+  return rows;
+}
+
+/**
+ * 查詢熱門文章（爆文分析）
+ */
+async function queryTopArticles(conn, brand, startDate, endDate, limit = 20) {
+  const [rows] = await conn.execute(`
+    SELECT
+      spot_name, source_name, channel_name, author, lang, mood,
+      like_count, comment_count, share_count, impression_count,
+      SUBSTRING(title, 1, 100) as title_short,
+      link, post_time
+    FROM keyword_articles
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+    ORDER BY (like_count + comment_count + share_count) DESC
+    LIMIT ${parseInt(limit, 10)}
+  `, [brand, startDate, endDate]);
+
+  return rows;
+}
+
+/**
+ * 查詢搜尋量數據
+ */
+async function querySearchVolume(conn, brand) {
+  const [rows] = await conn.execute(`
+    SELECT keyword, search_volume, cost_per_click, keyword_difficulty, intention_code
+    FROM keyword_volume
+    WHERE core_keyword = ? OR keyword LIKE ?
+    ORDER BY cost_per_click DESC
+  `, [brand, `%${brand.toLowerCase()}%`]);
+
+  return rows.map(r => ({
+    keyword: r.keyword,
+    monthly_search_volume: typeof r.search_volume === 'string' ? JSON.parse(r.search_volume) : r.search_volume,
+    cpc: r.cost_per_click,
+    difficulty: r.keyword_difficulty,
+    intent_code: r.intention_code,
+  }));
+}
+
+// ══════════════════════════════════════════════════════
+// All-in-one: Extract complete brand data
+// ══════════════════════════════════════════════════════
+
+/**
+ * 一次查詢取得品牌完整數據，產出 data.json 格式
+ * @param {string} brand
+ * @param {string} competitor
+ * @param {string} startDate
+ * @param {string} endDate
+ */
+async function extractBrandData(brand, competitor, startDate, endDate) {
+  console.log(`[mysql-adapter] 連接 DB...`);
+  const { connection, close } = await connect();
+
+  try {
+    console.log(`[mysql-adapter] 擷取 ${brand} 數據 (${startDate} ~ ${endDate})`);
+
+    // 主品牌
+    const [overview, monthly, daily, sentiment, platforms, kols, languages, topArticles, searchVolume] = await Promise.all([
+      querySocialOverview(connection, brand, startDate, endDate),
+      queryMonthlyTrend(connection, brand, startDate, endDate),
+      queryDailyTrend(connection, brand, startDate, endDate),
+      querySentiment(connection, brand, startDate, endDate),
+      queryPlatformDistribution(connection, brand, startDate, endDate),
+      queryTopKOL(connection, brand, startDate, endDate),
+      queryLanguageDistribution(connection, brand, startDate, endDate),
+      queryTopArticles(connection, brand, startDate, endDate),
+      querySearchVolume(connection, brand),
+    ]);
+
+    console.log(`  ✅ ${brand}: ${overview.total_posts} posts, ${overview.author_count} authors`);
+
+    // 競品
+    let competitorData = null;
+    if (competitor) {
+      const [compOverview, compMonthly, compSentiment] = await Promise.all([
+        querySocialOverview(connection, competitor, startDate, endDate),
+        queryMonthlyTrend(connection, competitor, startDate, endDate),
+        querySentiment(connection, competitor, startDate, endDate),
+      ]);
+      competitorData = {
+        brand: competitor,
+        overview: compOverview,
+        monthly: compMonthly,
+        sentiment: compSentiment,
+      };
+      console.log(`  ✅ ${competitor}: ${compOverview.total_posts} posts`);
+    }
+
+    return {
+      meta: { brand, competitor, period: `${startDate} ~ ${endDate}`, source: 'mysql', extracted_at: new Date().toISOString() },
+      pages: {
+        social_overview: { status: 'completed', confidence: 'high', data: { ...overview, monthly } },
+        daily_trend: { status: 'completed', data: daily },
+        sentiment: { status: 'completed', data: sentiment },
+        platform: { status: 'completed', data: { items: platforms } },
+        kol: { status: 'completed', data: { items: kols } },
+        language: { status: 'completed', data: { items: languages } },
+        top_articles: { status: 'completed', data: { items: topArticles } },
+        search_volume: { status: 'completed', data: { items: searchVolume } },
+      },
+      competitor_data: competitorData ? {
+        brand: competitor, source: 'mysql', status: 'completed',
+        data: { ...competitorData.overview, monthly: competitorData.monthly, sentiment: competitorData.sentiment },
+      } : null,
+    };
+
+  } finally {
+    await close();
+    console.log(`[mysql-adapter] DB 連線已關閉`);
+  }
+}
+
+// ══════════════════════════════════════════════════════
+// CLI
+// ══════════════════════════════════════════════════════
+
+if (require.main === module) {
+  const args = process.argv.slice(2);
+  const brand = args[args.indexOf('--brand') + 1] || 'Dior';
+  const competitor = args.includes('--competitor') ? args[args.indexOf('--competitor') + 1] : null;
+  const start = args[args.indexOf('--start') + 1] || '2025-03-01';
+  const end = args[args.indexOf('--end') + 1] || '2026-03-01';
+  const output = args.includes('--output') ? args[args.indexOf('--output') + 1] : null;
+
+  extractBrandData(brand, competitor, start, end).then(data => {
+    if (output) {
+      require('fs').writeFileSync(output, JSON.stringify(data, null, 2));
+      console.log(`✅ 寫入 ${output}`);
+    } else {
+      console.log(JSON.stringify(data, null, 2));
+    }
+  }).catch(err => {
+    console.error('❌', err.message);
+    process.exit(1);
+  });
+}
+
+module.exports = {
+  connect, extractBrandData,
+  querySocialOverview, queryMonthlyTrend, queryDailyTrend,
+  querySentiment, queryPlatformDistribution, queryTopKOL,
+  queryLanguageDistribution, queryTopArticles, querySearchVolume,
+};
