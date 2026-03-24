@@ -73,6 +73,13 @@ async function connect() {
 }
 
 // ══════════════════════════════════════════════════════
+// Helpers
+// ══════════════════════════════════════════════════════
+
+/** MySQL SUM() returns string for bigint — convert to number */
+function toNum(val) { return val === null || val === undefined ? 0 : Number(val); }
+
+// ══════════════════════════════════════════════════════
 // High-level Query Methods
 // ══════════════════════════════════════════════════════
 
@@ -97,7 +104,16 @@ async function querySocialOverview(conn, brand, startDate, endDate) {
     WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
   `, [brand, startDate, endDate]);
 
-  return rows[0];
+  const r = rows[0];
+  return {
+    influence: toNum(r.total_interactions), // 用 interactions 當影響力指標
+    posts: toNum(r.total_posts),
+    likes: toNum(r.total_likes),
+    comments: toNum(r.total_comments),
+    shares: toNum(r.total_shares),
+    authors: toNum(r.author_count),
+    channels: toNum(r.channel_count),
+  };
 }
 
 /**
@@ -118,7 +134,14 @@ async function queryMonthlyTrend(conn, brand, startDate, endDate) {
     ORDER BY month
   `, [brand, startDate, endDate]);
 
-  return rows;
+  return rows.map(r => ({
+    month: r.month,
+    influence: toNum(r.interactions),
+    posts: toNum(r.posts),
+    likes: toNum(r.likes),
+    comments: toNum(r.comments),
+    shares: toNum(r.shares),
+  }));
 }
 
 /**
@@ -138,7 +161,13 @@ async function queryDailyTrend(conn, brand, startDate, endDate) {
     ORDER BY date
   `, [brand, startDate, endDate]);
 
-  return rows;
+  return rows.map(r => ({
+    date: r.date,
+    posts: toNum(r.posts),
+    likes: toNum(r.likes),
+    comments: toNum(r.comments),
+    shares: toNum(r.shares),
+  }));
 }
 
 /**
@@ -184,7 +213,14 @@ async function queryPlatformDistribution(conn, brand, startDate, endDate) {
     ORDER BY interactions DESC
   `, [brand, startDate, endDate]);
 
-  return rows;
+  return rows.map(r => ({
+    name: r.platform,
+    influence: toNum(r.interactions),
+    posts: toNum(r.posts),
+    likes: toNum(r.likes),
+    comments: toNum(r.comments),
+    shares: toNum(r.shares),
+  }));
 }
 
 /**
@@ -208,7 +244,16 @@ async function queryTopKOL(conn, brand, startDate, endDate, limit = 20) {
     LIMIT ${parseInt(limit, 10)}
   `, [brand, startDate, endDate]);
 
-  return rows;
+  return rows.map(r => ({
+    name: r.channel_name,
+    author: r.author,
+    platform: r.platform,
+    posts: toNum(r.posts),
+    likes: toNum(r.likes),
+    comments: toNum(r.comments),
+    shares: toNum(r.shares),
+    influence: toNum(r.interactions),
+  }));
 }
 
 /**
@@ -226,7 +271,11 @@ async function queryLanguageDistribution(conn, brand, startDate, endDate) {
     ORDER BY interactions DESC
   `, [brand, startDate, endDate]);
 
-  return rows;
+  return rows.map(r => ({
+    lang: r.lang,
+    posts: toNum(r.posts),
+    influence: toNum(r.interactions),
+  }));
 }
 
 /**
@@ -245,7 +294,13 @@ async function queryTopArticles(conn, brand, startDate, endDate, limit = 20) {
     LIMIT ${parseInt(limit, 10)}
   `, [brand, startDate, endDate]);
 
-  return rows;
+  return rows.map(r => ({
+    ...r,
+    like_count: toNum(r.like_count),
+    comment_count: toNum(r.comment_count),
+    share_count: toNum(r.share_count),
+    impression_count: toNum(r.impression_count),
+  }));
 }
 
 /**

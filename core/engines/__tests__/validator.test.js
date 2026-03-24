@@ -155,14 +155,14 @@ describe('validate — interview schema', () => {
     expect(result.valid).toBe(true);
   });
 
-  test('accepts optional output_format enum values', () => {
-    const data = makeValidInterview({ output_format: 'pptx' });
+  test('accepts optional output_formats array', () => {
+    const data = makeValidInterview({ output_formats: ['pptx', 'gslides'] });
     const result = validate('interview', data);
     expect(result.valid).toBe(true);
   });
 
-  test('returns {valid: false} when output_format is not in enum', () => {
-    const data = makeValidInterview({ output_format: 'word' });
+  test('returns {valid: false} when output_formats has invalid value', () => {
+    const data = makeValidInterview({ output_formats: ['word'] });
     const result = validate('interview', data);
     expect(result.valid).toBe(false);
   });

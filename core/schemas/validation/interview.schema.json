@@ -8,16 +8,29 @@
     "purpose": { "type": "string", "enum": ["sell-venue", "brand-review", "competitive-analysis", "market-entry", "prove-partnership-value"] },
     "venue": { "type": "string" },
     "audience": { "type": "string" },
+    "objective": { "type": "string" },
     "sources": {
-      "type": "object",
-      "properties": {
-        "looker_studio": { "type": "string" },
-        "ga4": { "type": "string" },
-        "gsc": { "type": "string" },
-        "google_trends": { "type": "boolean" }
-      }
+      "oneOf": [
+        { "type": "array", "items": { "type": "string" } },
+        {
+          "type": "object",
+          "properties": {
+            "looker_studio": { "type": "string" },
+            "mysql": { "type": "boolean" },
+            "ga4": { "type": "string" },
+            "gsc": { "type": "string" },
+            "google_trends": { "type": "boolean" },
+            "dataforseo": { "type": "boolean" }
+          }
+        }
+      ]
     },
-    "output_format": { "type": "string", "enum": ["pptx", "gslides", "gdocs"] },
+    "dashboard_url": { "type": "string" },
+    "period": { "type": "string" },
+    "output_formats": { "type": "array", "items": { "type": "string", "enum": ["pptx", "gslides", "gdocs"] } },
+    "key_angles": { "type": "array", "items": { "type": "string" } },
+    "tone": { "type": "string" },
+    "notes": { "type": "string" },
     "language": { "type": "string", "default": "zh-TW" }
   }
 }
