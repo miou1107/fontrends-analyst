@@ -282,6 +282,19 @@ function renderRect(slide, el, brand) {
 // ══════════════════════════════════════════════════════
 
 async function render(pages, brand, theme, outputConfig) {
+  // ── Narrative 模式偵測 ──
+  const narrativePath = outputConfig?.runPath
+    ? path.join(outputConfig.runPath, 'narrative.json')
+    : null;
+  let narrative = null;
+  if (narrativePath && fs.existsSync(narrativePath)) {
+    try { narrative = JSON.parse(fs.readFileSync(narrativePath, 'utf8')); } catch (_) {}
+  }
+  if (narrative?.chapters) {
+    console.log('📖 Using narrative.json for PPTX');
+    return renderFromNarrative(narrative, brand, theme, outputConfig);
+  }
+
   const pptx = new PptxGenJS();
 
   // 16:9 widescreen layout
@@ -364,5 +377,127 @@ async function render(pages, brand, theme, outputConfig) {
 // ══════════════════════════════════════════════════════
 // Exports
 // ══════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════
+// Narrative Mode — 從 narrative.json 逐章產出
+// ══════════════════════════════════════════════════════
+
+async function renderFromNarrative(narrative, brand, theme, outputConfig) {
+  const pptx = new PptxGenJS();
+  pptx.layout = 'LAYOUT_WIDE';
+
+  const brandName = narrative.meta?.brand || outputConfig.brandName || 'Brand';
+  const period = narrative.meta?.period || '';
+  const venue = narrative.meta?.venue || '';
+  const primary = resolveColor('primary', brand);
+  const darkBg = resolveColor('dark_bg', brand) || '0A0A0A';
+  const lightBg = resolveColor('light_bg', brand) || 'F5F0E8';
+
+  pptx.title = narrative.title || `${brandName} Report`;
+  pptx.author = 'FonTrends × Journey101';
+
+  // ── 封面 ──
+  const cover = pptx.addSlide();
+  cover.background = { fill: darkBg };
+  cover.addText(textLines(brandName.toUpperCase(), { fontSize: 44, bold: true, color: primary, align: 'center' }), { x: 0.5, y: 1.2, w: 9, h: 1 });
+  cover.addText(textLines(narrative.title || '品牌社群分析報告', { fontSize: 20, color: 'FFFFFF', align: 'center' }), { x: 0.5, y: 2.2, w: 9, h: 0.6 });
+  cover.addText(textLines(`分析期間：${period}`, { fontSize: 14, color: 'CCCCCC', align: 'center' }), { x: 0.5, y: 2.8, w: 9, h: 0.5 });
+  cover.addText(textLines('Powered by FonTrends × Journey101', { fontSize: 10, color: '999999', align: 'center' }), { x: 0.5, y: 4.8, w: 9, h: 0.4 });
+
+  // ── 執行摘要 ──
+  if (narrative.executive_summary) {
+    const summary = pptx.addSlide();
+    summary.background = { fill: lightBg };
+    summary.addText(textLines('執行摘要', { fontSize: 28, bold: true, color: hexNoHash(darkBg) }), { x: 0.5, y: 0.3, w: 9, h: 0.6 });
+    const sentences = narrative.executive_summary.split(/[。！]/).filter(s => s.trim()).slice(0, 3);
+    const bulletText = sentences.map(s => `▸ ${s.trim()}`).join('\n\n');
+    summary.addText(textLines(bulletText, { fontSize: 12, color: '333333' }), { x: 0.5, y: 1.1, w: 9, h: 4 });
+  }
+
+  // ── 章節 ──
+  for (const chapter of (narrative.chapters || [])) {
+    const slide = pptx.addSlide();
+    slide.background = { fill: lightBg };
+
+    // 標題
+    slide.addText(textLines(chapter.title || '', { fontSize: 24, bold: true, color: hexNoHash(darkBg) }), { x: 0.5, y: 0.2, w: 9, h: 0.5 });
+
+    // 副標題
+    if (chapter.subtitle) {
+      slide.addText(textLines(chapter.subtitle, { fontSize: 11, italic: true, color: '666666' }), { x: 0.5, y: 0.7, w: 9, h: 0.3 });
+    }
+
+    // 表格（最多 6 行）
+    if (chapter.data_table?.headers && chapter.data_table?.rows) {
+      const headers = chapter.data_table.headers;
+      const rows = chapter.data_table.rows.slice(0, 6);
+      const tableRows = [
+        headers.map(h => ({ text: h, options: { bold: true, fontSize: 9, color: 'FFFFFF', fill: { color: primary } } })),
+        ...rows.map((row, i) => row.map(cell => ({
+          text: String(cell || ''),
+          options: { fontSize: 9, color: '333333', fill: { color: i % 2 === 0 ? 'F9F9F9' : 'FFFFFF' } },
+        }))),
+      ];
+      slide.addTable(tableRows, { x: 0.3, y: 1.1, w: 9.4, colW: Array(headers.length).fill(9.4 / headers.length), border: { pt: 0.5, color: 'DDDDDD' } });
+    } else if (chapter.paragraphs?.[0]) {
+      // 沒有表格就放段落（前 100 字）
+      const text = chapter.paragraphs[0].substring(0, 100) + (chapter.paragraphs[0].length > 100 ? '...' : '');
+      slide.addText(textLines(text, { fontSize: 11, color: '333333' }), { x: 0.5, y: 1.1, w: 9, h: 3 });
+    }
+
+    // 洞察
+    if (chapter.insight) {
+      slide.addText(textLines(chapter.insight, { fontSize: 10, italic: true, color: primary }), { x: 0.5, y: 4.8, w: 9, h: 0.4 });
+    }
+
+    // Speaker notes
+    const notes = [chapter.title];
+    if (chapter.so_what) notes.push(`要點：${chapter.so_what}`);
+    if (chapter.action_link) notes.push(`行動：${chapter.action_link}`);
+    if (chapter.paragraphs) notes.push(...chapter.paragraphs);
+    slide.addNotes(notes.join('\n'));
+  }
+
+  // ── 行動建議 ──
+  if (narrative.recommendations?.length) {
+    const actions = pptx.addSlide();
+    actions.background = { fill: lightBg };
+    actions.addText(textLines('行動建議', { fontSize: 28, bold: true, color: hexNoHash(darkBg) }), { x: 0.5, y: 0.2, w: 9, h: 0.5 });
+
+    const headers = ['優先級', 'WHO', 'WHAT', 'WHEN', 'KPI'];
+    const rows = narrative.recommendations.slice(0, 7).map(r => [r.priority, r.who, r.what, r.when, r.kpi]);
+    const tableRows = [
+      headers.map(h => ({ text: h, options: { bold: true, fontSize: 9, color: 'FFFFFF', fill: { color: primary } } })),
+      ...rows.map((row, i) => row.map(cell => ({
+        text: String(cell || ''),
+        options: { fontSize: 9, color: '333333', fill: { color: i % 2 === 0 ? 'F9F9F9' : 'FFFFFF' } },
+      }))),
+    ];
+    actions.addTable(tableRows, { x: 0.2, y: 0.9, w: 9.6, colW: [1.2, 1.5, 3, 1.5, 2.4], border: { pt: 0.5, color: 'DDDDDD' } });
+  }
+
+  // ── 結尾 ──
+  const closing = pptx.addSlide();
+  closing.background = { fill: darkBg };
+  closing.addText(textLines('Thank You', { fontSize: 40, bold: true, color: primary, align: 'center' }), { x: 0.5, y: 1.0, w: 9, h: 0.8 });
+  closing.addText(textLines(`${venue} × ${brandName}\n攜手打造精品行銷新高度`, { fontSize: 18, bold: true, color: 'FFFFFF', align: 'center' }), { x: 0.5, y: 2.0, w: 9, h: 1 });
+  closing.addText(textLines('FonTrends × Journey101  |  Confidential', { fontSize: 10, color: '999999', align: 'center' }), { x: 0.5, y: 4.8, w: 9, h: 0.4 });
+
+  // ── 輸出 ──
+  const outputDir = outputConfig.outputDir || path.join(os.homedir(), 'Desktop');
+  const fileName = `${brandName}_Report.pptx`;
+  if (!fs.existsSync(outputDir)) fs.mkdirSync(outputDir, { recursive: true });
+  const outputPath = path.join(outputDir, fileName);
+  await pptx.writeFile({ fileName: outputPath });
+
+  const desktopPath = path.join(os.homedir(), 'Desktop', fileName);
+  if (path.resolve(outputPath) !== path.resolve(desktopPath)) {
+    try { fs.copyFileSync(outputPath, desktopPath); } catch (_) {}
+  }
+
+  const chapters = narrative.chapters || [];
+  console.log(`✅ PPTX 已產生：${outputPath}（${chapters.length + 4} 頁）`);
+  return { file: outputPath };
+}
 
 module.exports = { render };
