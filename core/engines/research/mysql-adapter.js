@@ -91,22 +91,23 @@ function toNum(val) { return val === null || val === undefined ? 0 : Number(val)
  * @param {string} endDate - e.g., "2026-03-01"
  */
 async function querySocialOverview(conn, brand, startDate, endDate) {
+  // 用 keyword_content 取 influence_index（跟 Looker Studio 一致）
   const [rows] = await conn.execute(`
     SELECT
       COUNT(*) as total_posts,
       SUM(like_count) as total_likes,
       SUM(comment_count) as total_comments,
       SUM(share_count) as total_shares,
-      SUM(like_count + comment_count + share_count) as total_interactions,
+      SUM(influence_index) as total_influence,
       COUNT(DISTINCT channel_name) as channel_count,
       COUNT(DISTINCT author) as author_count
-    FROM keyword_articles
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+    FROM keyword_content
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
   `, [brand, startDate, endDate]);
 
   const r = rows[0];
   return {
-    influence: toNum(r.total_interactions), // 用 interactions 當影響力指標
+    influence: toNum(r.total_influence), // Looker Studio 的影響力指數
     posts: toNum(r.total_posts),
     likes: toNum(r.total_likes),
     comments: toNum(r.total_comments),
@@ -127,16 +128,16 @@ async function queryMonthlyTrend(conn, brand, startDate, endDate) {
       SUM(like_count) as likes,
       SUM(comment_count) as comments,
       SUM(share_count) as shares,
-      SUM(like_count + comment_count + share_count) as interactions
-    FROM keyword_articles
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+      SUM(influence_index) as influence
+    FROM keyword_content
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
     GROUP BY DATE_FORMAT(post_time, '%Y-%m')
     ORDER BY month
   `, [brand, startDate, endDate]);
 
   return rows.map(r => ({
     month: r.month,
-    influence: toNum(r.interactions),
+    influence: toNum(r.influence),
     posts: toNum(r.posts),
     likes: toNum(r.likes),
     comments: toNum(r.comments),
@@ -154,9 +155,10 @@ async function queryDailyTrend(conn, brand, startDate, endDate) {
       COUNT(*) as posts,
       SUM(like_count) as likes,
       SUM(comment_count) as comments,
-      SUM(share_count) as shares
-    FROM keyword_articles
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+      SUM(share_count) as shares,
+      SUM(influence_index) as influence
+    FROM keyword_content
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
     GROUP BY DATE(post_time)
     ORDER BY date
   `, [brand, startDate, endDate]);
@@ -167,6 +169,7 @@ async function queryDailyTrend(conn, brand, startDate, endDate) {
     likes: toNum(r.likes),
     comments: toNum(r.comments),
     shares: toNum(r.shares),
+    influence: toNum(r.influence),
   }));
 }
 
@@ -178,8 +181,8 @@ async function querySentiment(conn, brand, startDate, endDate) {
     SELECT
       mood,
       COUNT(*) as count
-    FROM keyword_articles
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+    FROM keyword_content
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
     GROUP BY mood
   `, [brand, startDate, endDate]);
 
@@ -206,16 +209,16 @@ async function queryPlatformDistribution(conn, brand, startDate, endDate) {
       SUM(like_count) as likes,
       SUM(comment_count) as comments,
       SUM(share_count) as shares,
-      SUM(like_count + comment_count + share_count) as interactions
-    FROM keyword_articles
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+      SUM(influence_index) as influence
+    FROM keyword_content
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
     GROUP BY source_name
-    ORDER BY interactions DESC
+    ORDER BY influence DESC
   `, [brand, startDate, endDate]);
 
   return rows.map(r => ({
     name: r.platform,
-    influence: toNum(r.interactions),
+    influence: toNum(r.influence),
     posts: toNum(r.posts),
     likes: toNum(r.likes),
     comments: toNum(r.comments),
@@ -236,11 +239,11 @@ async function queryTopKOL(conn, brand, startDate, endDate, limit = 20) {
       SUM(like_count) as likes,
       SUM(comment_count) as comments,
       SUM(share_count) as shares,
-      SUM(like_count + comment_count + share_count) as interactions
-    FROM keyword_articles
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+      SUM(influence_index) as influence
+    FROM keyword_content
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
     GROUP BY channel_name, author, source_name
-    ORDER BY interactions DESC
+    ORDER BY influence DESC
     LIMIT ${parseInt(limit, 10)}
   `, [brand, startDate, endDate]);
 
@@ -252,7 +255,7 @@ async function queryTopKOL(conn, brand, startDate, endDate, limit = 20) {
     likes: toNum(r.likes),
     comments: toNum(r.comments),
     shares: toNum(r.shares),
-    influence: toNum(r.interactions),
+    influence: toNum(r.influence),
   }));
 }
 
@@ -264,17 +267,17 @@ async function queryLanguageDistribution(conn, brand, startDate, endDate) {
     SELECT
       lang,
       COUNT(*) as posts,
-      SUM(like_count + comment_count + share_count) as interactions
-    FROM keyword_articles
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
+      SUM(influence_index) as influence
+    FROM keyword_content
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
     GROUP BY lang
-    ORDER BY interactions DESC
+    ORDER BY influence DESC
   `, [brand, startDate, endDate]);
 
   return rows.map(r => ({
     lang: r.lang,
     posts: toNum(r.posts),
-    influence: toNum(r.interactions),
+    influence: toNum(r.influence),
   }));
 }
 
@@ -286,11 +289,12 @@ async function queryTopArticles(conn, brand, startDate, endDate, limit = 20) {
     SELECT
       spot_name, source_name, channel_name, author, lang, mood,
       like_count, comment_count, share_count, impression_count,
+      influence_index,
       SUBSTRING(title, 1, 100) as title_short,
       link, post_time
-    FROM keyword_articles
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ? AND deleted_at IS NULL
-    ORDER BY (like_count + comment_count + share_count) DESC
+    FROM keyword_content
+    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
+    ORDER BY influence_index DESC
     LIMIT ${parseInt(limit, 10)}
   `, [brand, startDate, endDate]);
 
