@@ -94,15 +94,15 @@ async function querySocialOverview(conn, brand, startDate, endDate) {
   // 用 keyword_content 取 influence_index（跟 Looker Studio 一致）
   const [rows] = await conn.execute(`
     SELECT
-      COUNT(*) as total_posts,
-      SUM(like_count) as total_likes,
-      SUM(comment_count) as total_comments,
-      SUM(share_count) as total_shares,
-      SUM(influence_index) as total_influence,
-      COUNT(DISTINCT channel_name) as channel_count,
-      COUNT(DISTINCT author) as author_count
-    FROM keyword_content
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
+      COUNT(ka.id) as total_posts,
+      SUM(ka.like_count) as total_likes,
+      SUM(ka.comment_count) as total_comments,
+      SUM(ka.share_count) as total_shares,
+      COALESCE(SUM(kc.influence_index), 0) as total_influence,
+      COUNT(DISTINCT ka.channel_name) as channel_count,
+      COUNT(DISTINCT ka.author) as author_count
+    FROM keyword_articles ka LEFT JOIN keyword_content kc ON ka.match_key = kc.match_key
+    WHERE ka.spot_name = ? AND ka.post_time BETWEEN ? AND ? AND ka.deleted_at IS NULL
   `, [brand, startDate, endDate]);
 
   const r = rows[0];
@@ -123,15 +123,15 @@ async function querySocialOverview(conn, brand, startDate, endDate) {
 async function queryMonthlyTrend(conn, brand, startDate, endDate) {
   const [rows] = await conn.execute(`
     SELECT
-      DATE_FORMAT(post_time, '%Y-%m') as month,
-      COUNT(*) as posts,
-      SUM(like_count) as likes,
-      SUM(comment_count) as comments,
-      SUM(share_count) as shares,
-      SUM(influence_index) as influence
-    FROM keyword_content
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
-    GROUP BY DATE_FORMAT(post_time, '%Y-%m')
+      DATE_FORMAT(ka.post_time, '%Y-%m') as month,
+      COUNT(ka.id) as posts,
+      SUM(ka.like_count) as likes,
+      SUM(ka.comment_count) as comments,
+      SUM(ka.share_count) as shares,
+      COALESCE(SUM(kc.influence_index), 0) as influence
+    FROM keyword_articles ka LEFT JOIN keyword_content kc ON ka.match_key = kc.match_key
+    WHERE ka.spot_name = ? AND ka.post_time BETWEEN ? AND ? AND ka.deleted_at IS NULL
+    GROUP BY DATE_FORMAT(ka.post_time, '%Y-%m')
     ORDER BY month
   `, [brand, startDate, endDate]);
 
@@ -151,15 +151,15 @@ async function queryMonthlyTrend(conn, brand, startDate, endDate) {
 async function queryDailyTrend(conn, brand, startDate, endDate) {
   const [rows] = await conn.execute(`
     SELECT
-      DATE(post_time) as date,
-      COUNT(*) as posts,
-      SUM(like_count) as likes,
-      SUM(comment_count) as comments,
-      SUM(share_count) as shares,
-      SUM(influence_index) as influence
-    FROM keyword_content
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
-    GROUP BY DATE(post_time)
+      DATE(ka.post_time) as date,
+      COUNT(ka.id) as posts,
+      SUM(ka.like_count) as likes,
+      SUM(ka.comment_count) as comments,
+      SUM(ka.share_count) as shares,
+      COALESCE(SUM(kc.influence_index), 0) as influence
+    FROM keyword_articles ka LEFT JOIN keyword_content kc ON ka.match_key = kc.match_key
+    WHERE ka.spot_name = ? AND ka.post_time BETWEEN ? AND ? AND ka.deleted_at IS NULL
+    GROUP BY DATE(ka.post_time)
     ORDER BY date
   `, [brand, startDate, endDate]);
 
@@ -179,11 +179,11 @@ async function queryDailyTrend(conn, brand, startDate, endDate) {
 async function querySentiment(conn, brand, startDate, endDate) {
   const [rows] = await conn.execute(`
     SELECT
-      mood,
-      COUNT(*) as count
-    FROM keyword_content
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
-    GROUP BY mood
+      ka.mood,
+      COUNT(ka.id) as count
+    FROM keyword_articles ka LEFT JOIN keyword_content kc ON ka.match_key = kc.match_key
+    WHERE ka.spot_name = ? AND ka.post_time BETWEEN ? AND ? AND ka.deleted_at IS NULL
+    GROUP BY ka.mood
   `, [brand, startDate, endDate]);
 
   const total = rows.reduce((sum, r) => sum + r.count, 0) || 1;
@@ -204,15 +204,15 @@ async function querySentiment(conn, brand, startDate, endDate) {
 async function queryPlatformDistribution(conn, brand, startDate, endDate) {
   const [rows] = await conn.execute(`
     SELECT
-      source_name as platform,
-      COUNT(*) as posts,
-      SUM(like_count) as likes,
-      SUM(comment_count) as comments,
-      SUM(share_count) as shares,
-      SUM(influence_index) as influence
-    FROM keyword_content
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
-    GROUP BY source_name
+      ka.source_name as platform,
+      COUNT(ka.id) as posts,
+      SUM(ka.like_count) as likes,
+      SUM(ka.comment_count) as comments,
+      SUM(ka.share_count) as shares,
+      COALESCE(SUM(kc.influence_index), 0) as influence
+    FROM keyword_articles ka LEFT JOIN keyword_content kc ON ka.match_key = kc.match_key
+    WHERE ka.spot_name = ? AND ka.post_time BETWEEN ? AND ? AND ka.deleted_at IS NULL
+    GROUP BY ka.source_name
     ORDER BY influence DESC
   `, [brand, startDate, endDate]);
 
@@ -232,17 +232,17 @@ async function queryPlatformDistribution(conn, brand, startDate, endDate) {
 async function queryTopKOL(conn, brand, startDate, endDate, limit = 20) {
   const [rows] = await conn.execute(`
     SELECT
-      channel_name,
-      author,
-      source_name as platform,
-      COUNT(*) as posts,
-      SUM(like_count) as likes,
-      SUM(comment_count) as comments,
-      SUM(share_count) as shares,
-      SUM(influence_index) as influence
-    FROM keyword_content
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
-    GROUP BY channel_name, author, source_name
+      ka.channel_name,
+      ka.author,
+      ka.source_name as platform,
+      COUNT(ka.id) as posts,
+      SUM(ka.like_count) as likes,
+      SUM(ka.comment_count) as comments,
+      SUM(ka.share_count) as shares,
+      COALESCE(SUM(kc.influence_index), 0) as influence
+    FROM keyword_articles ka LEFT JOIN keyword_content kc ON ka.match_key = kc.match_key
+    WHERE ka.spot_name = ? AND ka.post_time BETWEEN ? AND ? AND ka.deleted_at IS NULL
+    GROUP BY ka.channel_name, ka.author, ka.source_name
     ORDER BY influence DESC
     LIMIT ${parseInt(limit, 10)}
   `, [brand, startDate, endDate]);
@@ -265,12 +265,12 @@ async function queryTopKOL(conn, brand, startDate, endDate, limit = 20) {
 async function queryLanguageDistribution(conn, brand, startDate, endDate) {
   const [rows] = await conn.execute(`
     SELECT
-      lang,
-      COUNT(*) as posts,
-      SUM(influence_index) as influence
-    FROM keyword_content
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
-    GROUP BY lang
+      ka.lang,
+      COUNT(ka.id) as posts,
+      COALESCE(SUM(kc.influence_index), 0) as influence
+    FROM keyword_articles ka LEFT JOIN keyword_content kc ON ka.match_key = kc.match_key
+    WHERE ka.spot_name = ? AND ka.post_time BETWEEN ? AND ? AND ka.deleted_at IS NULL
+    GROUP BY ka.lang
     ORDER BY influence DESC
   `, [brand, startDate, endDate]);
 
@@ -287,14 +287,14 @@ async function queryLanguageDistribution(conn, brand, startDate, endDate) {
 async function queryTopArticles(conn, brand, startDate, endDate, limit = 20) {
   const [rows] = await conn.execute(`
     SELECT
-      spot_name, source_name, channel_name, author, lang, mood,
-      like_count, comment_count, share_count, impression_count,
-      influence_index,
-      SUBSTRING(title, 1, 100) as title_short,
-      link, post_time
-    FROM keyword_content
-    WHERE spot_name = ? AND post_time BETWEEN ? AND ?
-    ORDER BY influence_index DESC
+      ka.spot_name, ka.source_name, ka.channel_name, ka.author, ka.lang, ka.mood,
+      ka.like_count, ka.comment_count, ka.share_count, ka.impression_count,
+      kc.influence_index,
+      SUBSTRING(ka.title, 1, 100) as title_short,
+      ka.link, ka.post_time
+    FROM keyword_articles ka LEFT JOIN keyword_content kc ON ka.match_key = kc.match_key
+    WHERE ka.spot_name = ? AND ka.post_time BETWEEN ? AND ? AND ka.deleted_at IS NULL
+    ORDER BY kc.influence_index DESC
     LIMIT ${parseInt(limit, 10)}
   `, [brand, startDate, endDate]);
 
