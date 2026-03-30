@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { readJSON } = require('../helpers');
+const { normalize: normalizeNarrative } = require('../narrative-normalizer');
 
 /**
  * audit-engine.js — §10 品質審核引擎（深化版）
@@ -342,6 +343,104 @@ function auditOutput(runDir) {
 }
 
 // ══════════════════════════════════════════════════════
+// 7. Learned Rules（來自 comment-feedback 學習）
+// ══════════════════════════════════════════════════════
+
+function auditLearnedRules(narrative, runDir) {
+  const checks = [];
+  const warnings = [];
+  const errors = [];
+
+  const rulesPath = path.resolve(__dirname, '../../learned/learned-rules.json');
+  if (!fs.existsSync(rulesPath)) {
+    checks.push('learned_rules_skipped');
+    return { checks, warnings, errors };
+  }
+
+  let learnedRules;
+  try {
+    learnedRules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
+  } catch (e) {
+    warnings.push(`learned-rules.json parse error: ${e.message}`);
+    return { checks, warnings, errors };
+  }
+
+  const narrativeText = narrative ? JSON.stringify(narrative) : '';
+  const screenshotsDir = path.join(runDir, 'screenshots');
+  const hasScreenshots = fs.existsSync(screenshotsDir) &&
+    fs.readdirSync(screenshotsDir).some(f => f.endsWith('.png') || f.endsWith('.jpg'));
+
+  // ── renderer_rules ──────────────────────────────────
+  for (const rule of (learnedRules.renderer_rules || [])) {
+    checks.push(`learned.${rule.id}`);
+    // RR-006 / RR-007: screenshot presence checks
+    if (rule.category === 'screenshot_quality' || rule.category === 'screenshot_validation') {
+      if (!hasScreenshots) {
+        warnings.push(`[${rule.id}] ${rule.rule} — screenshots/ missing or empty`);
+      }
+    }
+    // RR-005: hyperlink — check that narrative doesn't contain bare http URLs (no markup)
+    if (rule.category === 'hyperlink') {
+      const bareUrlPattern = /https?:\/\/[^\s"<>]+/g;
+      const matches = narrativeText.match(bareUrlPattern);
+      if (matches && matches.length > 0) {
+        warnings.push(`[${rule.id}] ${rule.rule} — ${matches.length} bare URL(s) detected; ensure hyperlinks are set`);
+      }
+    }
+    // Other renderer_rules: note as advisory (not auto-checkable without rendered output)
+    if (!['screenshot_quality', 'screenshot_validation', 'hyperlink'].includes(rule.category)) {
+      checks.push(`learned.${rule.id}.advisory`);
+    }
+  }
+
+  // ── narrative_rules ──────────────────────────────────
+  for (const rule of (learnedRules.narrative_rules || [])) {
+    checks.push(`learned.${rule.id}`);
+    if (rule.category === 'abstract') {
+      // NR-001: 本篇摘要 must exist
+      const hasAbstract = narrativeText.includes('本篇摘要') || narrativeText.includes('executive_summary');
+      if (!hasAbstract) {
+        warnings.push(`[${rule.id}] ${rule.rule} — no 本篇摘要 section found`);
+      }
+    }
+    if (rule.category === 'event_analysis') {
+      // NR-002: event sections should have interaction data
+      const hasInteraction = /讚|留言|分享|互動/.test(narrativeText);
+      if (!hasInteraction) {
+        warnings.push(`[${rule.id}] ${rule.rule} — no 讚/留言/分享/互動 found in narrative`);
+      }
+    }
+    if (rule.category === 'data_driven') {
+      // NR-003: data-driven check — numeric evidence in narrative
+      const hasNumbers = /\d{3,}/.test(narrativeText);
+      if (!hasNumbers) {
+        warnings.push(`[${rule.id}] ${rule.rule} — insufficient numeric evidence in narrative`);
+      }
+    }
+  }
+
+  // ── audit_rules ──────────────────────────────────────
+  for (const rule of (learnedRules.audit_rules || [])) {
+    checks.push(`learned.${rule.id}`);
+    if (rule.category === 'source_citation') {
+      // AR-001: source links — look for URLs in narrative
+      const hasUrls = /https?:\/\//.test(narrativeText);
+      if (!hasUrls) {
+        warnings.push(`[${rule.id}] ${rule.rule} — no source URLs found in narrative`);
+      }
+    }
+    if (rule.category === 'screenshot_audit') {
+      // AR-002: screenshot audit
+      if (!hasScreenshots) {
+        errors.push(`[${rule.id}] ${rule.rule} — screenshots/ missing or empty`);
+      }
+    }
+  }
+
+  return { checks, warnings, errors };
+}
+
+// ══════════════════════════════════════════════════════
 // Main: Full Audit
 // ══════════════════════════════════════════════════════
 
@@ -350,9 +449,15 @@ function auditOutput(runDir) {
  * @returns {{ passed, score, checks, warnings, errors, summary }}
  */
 function runAudit(runDir) {
-  const narrative = readJSON(path.join(runDir, 'narrative.json'));
   const data = readJSON(path.join(runDir, 'data.json'));
   const interview = readJSON(path.join(runDir, 'interview.json'));
+  const analysis = readJSON(path.join(runDir, 'analysis.json'));
+
+  let narrative = readJSON(path.join(runDir, 'narrative.json'));
+  if (narrative) {
+    const { narrative: normalized } = normalizeNarrative(narrative, { data, analysis, interview });
+    narrative = normalized;
+  }
 
   const results = [
     { name: '結構完整性', ...auditStructure(narrative) },
@@ -361,6 +466,7 @@ function runAudit(runDir) {
     { name: '三層對比框架', ...auditComparisons(narrative) },
     { name: '數據一致性', ...auditDataConsistency(narrative, data) },
     { name: '產出物檢查', ...auditOutput(runDir) },
+    { name: '學習規則', ...auditLearnedRules(narrative, runDir) },
   ];
 
   const allChecks = results.flatMap(r => r.checks);
@@ -369,8 +475,11 @@ function runAudit(runDir) {
   const passed = allErrors.length === 0;
 
   // 計算品質分數（100 分制）
+  // 按比例扣分：error 每個扣 total 的 5%，warning 每個扣 total 的 1%
   const totalChecks = allChecks.length || 1;
-  const deductions = allErrors.length * 10 + allWarnings.length * 2;
+  const errorPenalty = Math.min(50, allErrors.length * 5);        // errors 最多扣 50 分
+  const warningPenalty = Math.min(40, allWarnings.length * 1);    // warnings 最多扣 40 分
+  const deductions = errorPenalty + warningPenalty;
   const score = Math.max(0, Math.min(100, 100 - deductions));
 
   const summary = results.map(r => ({

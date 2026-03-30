@@ -1,13 +1,22 @@
 'use strict';
 
-const INTENT_ORDER = { delete: 0, structure: 1, content: 2, style: 3, question: 4 };
+const INTENT_ORDER = { delete: 0, new_report: 1, structure: 2, enrich: 3, content: 4, style: 5, question: 6 };
 
 const KEYWORD_RULES = [
+  // 需要產出新報告的意圖
+  { intent: 'new_report', keywords: ['換成', '改成英文', '英文版', '換品牌', '改時間範圍', '最近', '改成最近', '換語言', 'english version'] },
+  // 刪除
   { intent: 'delete', keywords: ['刪掉', '刪除', '移除', '拿掉', 'remove', 'delete'] },
-  { intent: 'structure', keywords: ['移到', '搬到', '加一頁', '新增頁', '調換', '順序', 'move', 'reorder'] },
+  // 結構變更
+  { intent: 'structure', keywords: ['移到', '搬到', '加一章', '加一頁', '新增頁', '調換', '順序', 'move', 'reorder'] },
+  // 內容加深/補充（籠統性的品質提升要求）
+  { intent: 'enrich', keywords: ['更具體', '更有深度', '多一點', '加深', '補充', '怪怪的', '不夠', '太淺', '重寫', '截圖', '圖表', '趨勢圖', '多分析'] },
+  // 問題
   { intent: 'question', keywords: ['？', '?', '為什麼', '哪裡來', '是不是', 'why', 'how', 'what'] },
+  // 樣式
   { intent: 'style', keywords: ['字型', '字體', '顏色', '大小', '粗體', '間距', 'pt', 'font', 'color', 'bold', 'size'] },
-  { intent: 'content', keywords: ['錯了', '改成', '應該是', '換成', '更新', '修改', 'wrong', 'change', 'update'] },
+  // 明確的內容修正
+  { intent: 'content', keywords: ['錯了', '改成', '應該是', '更新', '修改', 'wrong', 'change', 'update'] },
 ];
 
 function classifyIntent(commentText, elementContext) {

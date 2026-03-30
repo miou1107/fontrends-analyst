@@ -1,0 +1,94 @@
+{
+  "generated_at": "2026-03-30T00:00:00.000Z",
+  "total_corrections": 10,
+  "renderer_rules": [
+    {
+      "id": "RR-001",
+      "rule": "圖說文字必須置中（CENTER）且與圖片分行排列，並套用斜體 9pt 樣式",
+      "source_comment": "AAAB2kvBOE8",
+      "category": "figure_caption",
+      "applies_to": ["gdocs", "gslides"]
+    },
+    {
+      "id": "RR-002",
+      "rule": "每張圖片必須附上圖片編號「圖 N  描述」，格式：置中斜體 9pt，位於圖片下方獨立段落",
+      "source_comment": "AAABzjIJUxg",
+      "category": "figure_caption",
+      "applies_to": ["gdocs", "gslides"]
+    },
+    {
+      "id": "RR-003",
+      "rule": "每個表格必須在表格上方加上「表 N  摘要說明」，格式：置中粗體 10pt，位於表格前獨立段落",
+      "source_comment": "AAABzjIJUxM",
+      "category": "table_caption",
+      "applies_to": ["gdocs"]
+    },
+    {
+      "id": "RR-004",
+      "rule": "重要事件出處段落應使用 Heading 3 標題、粗體連結名稱、URL 縮小字型（9pt），圖片置中，圖說斜體置中",
+      "source_comment": "AAABzjIJUxE",
+      "category": "section_style",
+      "applies_to": ["gdocs"]
+    },
+    {
+      "id": "RR-005",
+      "rule": "文章中所有 URL 必須設為可點擊的超連結語法，不可只是純文字",
+      "source_comment": "AAABzjIJUw0",
+      "category": "hyperlink",
+      "applies_to": ["gdocs", "gslides"]
+    },
+    {
+      "id": "RR-006",
+      "rule": "社群平台截圖必須包含完整瀏覽器畫面（含網址列、帳號名稱、原始內容、互動數、網友留言），不可只截單張貼文照片",
+      "source_comment": "AAABzjIJUwo",
+      "category": "screenshot_quality",
+      "applies_to": ["gdocs", "gslides"]
+    },
+    {
+      "id": "RR-007",
+      "rule": "宣稱有附截圖的段落，必須確認截圖實際已插入文件（非空白佔位），產出後需驗證圖片存在",
+      "source_comment": "AAABzjIJUwg",
+      "category": "screenshot_validation",
+      "applies_to": ["gdocs", "gslides"]
+    }
+  ],
+  "narrative_rules": [
+    {
+      "id": "NR-001",
+      "rule": "報告開頭（標題頁後、目錄前）必須包含「本篇摘要」段落，說明報告重點、特色事件、KOL 影響力、網友反應等",
+      "source_comment": "AAABzjIJUxg",
+      "category": "abstract",
+      "applies_to": ["gdocs"]
+    },
+    {
+      "id": "NR-002",
+      "rule": "重要事件章節需包含：(1) 社群原始貼文截圖與連結 (2) 互動數據（讚/留言/分享） (3) 網友觀感摘要（正負面評價分析）",
+      "source_comment": "AAAB2S8AR3M",
+      "category": "event_analysis",
+      "applies_to": ["gdocs", "gslides"]
+    },
+    {
+      "id": "NR-003",
+      "rule": "所有合作機會分析/第三方合作章節必須附上資料庫或 Looker Studio 的具體數字佐證（影響力、發文數、作者數等），不可只有文字論述",
+      "source_comment": "AAAB2S8AR2U",
+      "category": "data_driven",
+      "applies_to": ["gdocs", "gslides"]
+    }
+  ],
+  "audit_rules": [
+    {
+      "id": "AR-001",
+      "rule": "重要事件必須附上社群原始出處連結（可點擊）和互動數據，作為 data driven 的數據佐證",
+      "source_comment": "AAAB2S8AR3E",
+      "category": "source_citation",
+      "applies_to": ["gdocs", "gslides"]
+    },
+    {
+      "id": "AR-002",
+      "rule": "截圖品質 audit：(1) 截圖是否為完整瀏覽器畫面 (2) 圖片是否實際插入（非空白） (3) 每張截圖是否有對應圖說和編號",
+      "source_comment": "AAABzjIJUwo,AAABzjIJUwg,AAABzjIJUxg",
+      "category": "screenshot_audit",
+      "applies_to": ["gdocs", "gslides"]
+    }
+  ]
+}

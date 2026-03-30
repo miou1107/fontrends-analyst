@@ -13,6 +13,34 @@ const fs = require('fs');
 const path = require('path');
 const { readJSON, writeJSON, resolveColor, formatNumber, formatPct } = require('./helpers');
 const { validateAndWarn } = require('./validator');
+const { normalize: normalizeNarrative } = require('./narrative-normalizer');
+
+// ══════════════════════════════════════════════════════
+// Learned Rules — Load & Log
+// ══════════════════════════════════════════════════════
+
+function loadLearnedRules() {
+  const rulesPath = path.resolve(__dirname, '../learned/learned-rules.json');
+  if (!fs.existsSync(rulesPath)) {
+    console.log('[LearnedRules] learned-rules.json not found, skipping');
+    return null;
+  }
+  let rules;
+  try {
+    rules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
+  } catch (e) {
+    console.log(`[LearnedRules] Failed to parse learned-rules.json: ${e.message}`);
+    return null;
+  }
+  const rr = (rules.renderer_rules || []).map(r => r.id);
+  const nr = (rules.narrative_rules || []).map(r => r.id);
+  const ar = (rules.audit_rules || []).map(r => r.id);
+  const allIds = [...rr, ...nr, ...ar];
+  const allRules = [...(rules.renderer_rules || []), ...(rules.narrative_rules || []), ...(rules.audit_rules || [])];
+  const ruleLabels = allRules.map(r => `${r.id} ${r.rule.slice(0, 12)}…`).join(', ');
+  console.log(`[LearnedRules] Loaded ${allIds.length} rules: ${ruleLabels}`);
+  return rules;
+}
 
 // ══════════════════════════════════════════════════════
 // CLI Argument Parsing
@@ -62,11 +90,30 @@ function loadConfig(runPath, schemaName) {
   const data = readJSON(path.join(runPath, 'data.json'))
     || readJSON(path.join(runPath, 'data_partial.json'));
 
-  // Load narrative.json (optional)
-  const narrative = readJSON(path.join(runPath, 'narrative.json'));
+  // Load supporting files for enrichment
+  const interview = readJSON(path.join(runPath, 'interview.json'));
+  const analysis = readJSON(path.join(runPath, 'analysis.json'));
+
+  // Load user profile (if interview has user_id)
+  let profile = null;
+  try {
+    const { loadProfile } = require('./profile-manager');
+    const userId = interview?.user_id;
+    if (userId) profile = loadProfile(userId);
+  } catch { /* profile-manager optional */ }
+
+  // Load narrative.json (optional) + normalize + enrich
+  let narrative = readJSON(path.join(runPath, 'narrative.json'));
+  if (narrative) {
+    const { narrative: normalized, warnings } = normalizeNarrative(narrative, { data, analysis, interview, profile });
+    if (warnings.length > 0) {
+      console.log(`🔧 narrative.json 自動修正+補齊（${warnings.length} 項）：`);
+      warnings.forEach(w => console.log(`   - ${w}`));
+    }
+    narrative = normalized;
+  }
 
   // Validate key data files (non-blocking warnings)
-  const interview = readJSON(path.join(runPath, 'interview.json'));
   if (interview) validateAndWarn('interview', interview, 'interview.json');
   if (narrative) validateAndWarn('narrative', narrative, 'narrative.json');
 
@@ -551,6 +598,9 @@ async function main() {
   console.log(`📁 Run: ${args.run}`);
   console.log(`📊 Format: ${args.format}`);
   console.log(`📐 Schema: ${args.schema}\n`);
+
+  // Load learned rules (closes the loop from comment-feedback learning)
+  loadLearnedRules();
 
   // Load all config
   const config = loadConfig(args.run, args.schema);
