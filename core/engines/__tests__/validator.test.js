@@ -14,6 +14,7 @@ function makeValidNarrative(overrides = {}) {
       period: '2025-Q4',
     },
     title: '品牌社群聲量分析報告',
+    executive_summary: '本季品牌社群聲量表現亮眼，影響力指數較上季成長顯著。',
     chapters: [
       {
         id: 'social_overview',
@@ -102,7 +103,7 @@ describe('validate — narrative schema', () => {
 
   test('accepts optional fields: executive_summary, recommendations', () => {
     const data = makeValidNarrative({
-      executive_summary: '本季亮點摘要。',
+      executive_summary: '本季品牌社群聲量亮點摘要，影響力持續成長。',
       recommendations: [
         { priority: '立即', who: '行銷部', what: '聯名活動', when: 'Q3', kpi: '+20%到店' },
       ],

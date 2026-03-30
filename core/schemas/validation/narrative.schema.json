@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "type": "object",
-  "required": ["meta", "title", "chapters"],
+  "required": ["meta", "title", "chapters", "executive_summary"],
   "properties": {
     "meta": {
       "type": "object",
@@ -12,11 +12,13 @@
         "period": { "type": "string" },
         "purpose": { "type": "string" },
         "venue": { "type": "string" },
+        "audience": { "type": "string" },
+        "tone": { "type": "string" },
         "generated_at": { "type": "string" }
       }
     },
     "title": { "type": "string", "minLength": 1 },
-    "executive_summary": { "type": "string" },
+    "executive_summary": { "type": "string", "minLength": 10 },
     "chapters": {
       "type": "array",
       "minItems": 1,
@@ -27,19 +29,37 @@
           "id": { "type": "string" },
           "title": { "type": "string" },
           "subtitle": { "type": "string" },
-          "paragraphs": { "type": "array", "items": { "type": "string" } },
+          "paragraphs": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
           "data_table": {
             "type": "object",
             "required": ["headers", "rows"],
             "properties": {
-              "headers": { "type": "array", "items": { "type": "string" } },
+              "headers": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
               "rows": { "type": "array", "items": { "type": "array", "items": { "type": "string" } } }
             }
           },
           "insight": { "type": "string" },
           "so_what": { "type": "string" },
-          "action_link": { "type": "string" }
+          "action_link": { "type": "string" },
+          "self_comparison": { "type": "string" },
+          "competitor_comparison": { "type": "string" }
         }
+      }
+    },
+    "market_analysis": {
+      "type": "object",
+      "properties": {
+        "swot": {
+          "type": "object",
+          "properties": {
+            "strengths": { "type": "array", "items": { "type": "string" } },
+            "weaknesses": { "type": "array", "items": { "type": "string" } },
+            "opportunities": { "type": "array", "items": { "type": "string" } },
+            "threats": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "positioning": { "type": "string" },
+        "market_share_estimate": { "type": "string" }
       }
     },
     "recommendations": {
@@ -52,8 +72,17 @@
           "who": { "type": "string" },
           "what": { "type": "string" },
           "when": { "type": "string" },
-          "kpi": { "type": "string" }
+          "kpi": { "type": "string" },
+          "rationale": { "type": "string" }
         }
+      }
+    },
+    "appendix": {
+      "type": "object",
+      "properties": {
+        "methodology": { "type": "string" },
+        "data_quality": { "type": "string" },
+        "disclaimer": { "type": "string" }
       }
     }
   }

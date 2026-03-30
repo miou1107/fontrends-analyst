@@ -1,12 +1,92 @@
-# Learning Feedback — 學習回饋機制
+# 留言回饋處理(comment-feedback) — OpenSpec 規格書 v2
 
 ## Purpose
 
-讓用戶修改報告後，AI 能學習修正內容並回饋到 Core 知識庫，透過 Git PR 機制讓管理者審核後合併，實現 Skill 的持續進化。
+處理使用者在報告（Google Slides/Docs）上的留言回饋，自動執行修改並分流學習。
+v2 更新（2026-03-25）：新增留言意圖分類、處理規則、學習分流機制。
 
 ---
 
 ## Requirements
+
+### Requirement: 處理原則
+
+#### Scenario: 能做的直接做
+- **GIVEN** 收到任何留言
+- **WHEN** AI 能判斷如何處理
+- **THEN** 直接執行修改
+- **AND** 做完留言回覆告知改了什麼
+- **AND** 不列清單問確認
+
+#### Scenario: 不確定才問
+- **GIVEN** 收到留言但無法判斷
+- **WHEN** 數據不足或意圖模糊到無法執行
+- **THEN** 留言問使用者
+
+#### Scenario: 局部修改全篇掃描
+- **GIVEN** 留言在特定段落
+- **WHEN** 執行修改
+- **THEN** 從留言處開始改
+- **AND** 同時掃全篇找類似問題一併修正
+- **AND** 除非 user 說「只改這裡」，才只動留言那個地方
+
+---
+
+### Requirement: 意圖分類
+
+#### Scenario: 明確修正(content)
+- **GIVEN** 留言包含「改成」「應該是」「錯了」
+- **THEN** 改那段 + 掃全篇改類似問題
+
+#### Scenario: 內容加深(enrich)
+- **GIVEN** 留言包含「更具體」「更有深度」「多一點」「怪怪的」「重寫」「截圖」
+- **THEN** 掃全篇找淺的地方逐一加深
+
+#### Scenario: 結構變更(structure)
+- **GIVEN** 留言包含「加一章」「新增」
+- **THEN** 從 data.json 寫整章，插入合適位置，更新摘要
+
+#### Scenario: 需要新報告(new_report)
+- **GIVEN** 留言包含「換品牌」「改時間範圍」「英文版」
+- **THEN** 重跑 pipeline 產出新檔案，留言回覆新網址，舊報告不動
+
+#### Scenario: 模糊留言(enrich)
+- **GIVEN** 留言說「怪怪的」「感覺不對」
+- **THEN** AI 自行判斷問題，改完留言說明判斷理由
+
+---
+
+### Requirement: 新報告 vs 修改判斷
+
+#### Scenario: 產出新報告
+- **GIVEN** 品牌變更 OR 數據範圍變更 OR 語言變更
+- **THEN** 產出新報告，舊報告不動，留言回覆新網址
+
+#### Scenario: 修改現有報告
+- **GIVEN** 上述以外的所有修改
+- **THEN** 修改現有報告
+
+---
+
+### Requirement: 學習分流
+
+#### Scenario: 通用品質（換人也適用）
+- **GIVEN** 修改內容屬於通用品質改善
+- **THEN** 直接寫入 skill / normalizer，不用問 user
+
+#### Scenario: 個人偏好（只有這個人在意）
+- **GIVEN** 修改內容屬於個人偏好
+- **THEN** 留言問「要記到個人偏好嗎？回覆 yes」
+- **AND** user 回 yes 後寫入 profile
+- **AND** 不回 yes 就只改這次
+
+#### Scenario: 程式碼 bug
+- **GIVEN** 修改內容是程式碼層面的錯誤
+- **THEN** 直接改 code，不用問
+
+---
+
+### Requirement: 觸發學習（舊版保留）
 
 ### Requirement: 觸發學習
 
