@@ -261,3 +261,65 @@
 - **WHEN** 下次分析同品牌或同類報告
 - **THEN** 分析 agent 讀取歷史稽核紀錄
 - **AND** 在行動建議產出時特別注意 KPI 量化程度
+
+---
+
+> **v2 增補（2026-04-08）：** 新增規則命中追蹤，對齊 `self-learning` v3 的規則索引表與 `orchestrator` v2 的 Pre-Run Checklist。詳見 `openspec/plans/2026-04-08-self-learning-gap-fixes.md`。
+
+### Requirement: 規則命中追蹤（rule-hits.jsonl）
+
+Report-audit MUST 在稽核階段比對本次報告是否遵循 pre-run checklist 的每一條規則，並寫入 `core/learned/rule-hits.jsonl` 供後續學習與趨勢分析使用。
+
+#### Scenario: 命中比對
+- **GIVEN** orchestrator 已產出 `runs/{brand}-{date}/checklist.json` 且 `total_rules > 0`
+- **WHEN** report-audit 執行稽核
+- **THEN** 對 checklist 中每一條規則判定命中類型：
+  - `avoided` — 報告明確遵循該規則（例：規則要求「不得用代言人宣布解釋聲量高峰」，本次報告確實沒有）
+  - `violated` — 報告違反該規則（例：規則要求「行動建議須具體到部門」，本次某條建議只寫「相關單位」）
+  - `na` — 本次報告不觸及該規則涵蓋的情境
+- **AND** 每條判定附上 evidence（slide_id / element_id / 引用原文片段）
+
+#### Scenario: rule-hits.jsonl 寫入
+- **GIVEN** 命中比對完成
+- **WHEN** report-audit 寫入結果
+- **THEN** 以 JSONL 格式 append 到 `core/learned/rule-hits.jsonl`，每條規則一筆：
+
+```json
+{
+  "run_id": "LV-2026-04-08",
+  "rule_id": "insights-20260325-003",
+  "hit_type": "avoided",
+  "evidence": "slide 4 的事件標注引用了 Pharrell 系列發布，非代言人宣布",
+  "audited_at": "2026-04-08T15:30:00+08:00",
+  "auditor": "report-audit-subagent"
+}
+```
+
+- **AND** 同一 run_id 的所有規則命中結果共用同一 batch 寫入
+
+#### Scenario: Regression 偵測
+- **GIVEN** 某筆 rule_id 在 rule-hits.jsonl 的歷史紀錄顯示「曾經 avoided ≥1 次」
+- **WHEN** 本次 run 該 rule_id 為 `violated`
+- **THEN** 標記為 `regression`
+- **AND** 自動產生一筆 `insights.jsonl` 紀錄：
+  - `dimension`: 原 rule 對應 dimension
+  - `insight`: 「規則 {rule_id} 出現退化，{N} 次前曾成功避免」
+  - `confidence`: `high`
+  - `priority`: `high`
+- **AND** 此 insight 直接觸發「向下相容 — 高優先即時 PR」流程（對齊 self-learning v3）
+
+#### Scenario: Hard Gate 配合
+- **GIVEN** checklist.json 存在且 `total_rules > 0`
+- **WHEN** report-audit 發現本次 rule-hits.jsonl 缺漏 checklist 中任一規則的判定
+- **THEN** 不得標記 verdict 為 `pass`
+- **AND** 拒絕交付（verdict: ❌ 需重做，reason: `missing_rule_hits`）
+- **AND** 此 gate 對齊 `orchestrator` v2 的 Hard Gate scenario
+
+#### Scenario: 趨勢指標新增
+- **GIVEN** rule-hits.jsonl 累積紀錄
+- **WHEN** self-learning 品質趨勢追蹤流程執行
+- **THEN** 計算額外三個指標：
+  - **avoided_rate**：最近 N 次 run 的 `avoided / (avoided + violated)`
+  - **regression_count**：最近 N 次 run 的 regression 次數
+  - **na_rate**：`na / total_rules`（過高表示 mapping 與實際 run 不相關，mapping 需整理）
+- **AND** 三個指標寫入 audit-history.jsonl 的 metadata 段落

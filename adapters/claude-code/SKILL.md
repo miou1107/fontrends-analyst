@@ -35,9 +35,16 @@ description: |
 - `~/SourceCode/Work/fontrends-analyst/core/templates/ppt-template.md`
 - `~/SourceCode/Work/fontrends-analyst/core/templates/brand-colors.json`
 
-### Step 5: 載入學習紀錄（如有）
-- 讀取 `~/SourceCode/Work/fontrends-analyst/core/learned/corrections.jsonl`
-- 將歷史修正作為分析時的參考
+### Step 5: 載入學習紀錄（v3，2026-04-08 升級）
+- 優先讀取 `~/SourceCode/Work/fontrends-analyst/core/learned/mapping.json`（規則索引表，O(1) 查詢）
+- 依本次 run 的 `brand` / `industry` 篩選符合 scope 的規則
+- 過濾條件：`ttl_until > now` 且 `superseded_by == null`
+- Fallback：mapping.json 讀取失敗時才退回全掃 `core/learned/corrections.jsonl` + `insights.jsonl`
+- 產出 `runs/{brand}-{date}/checklist.json` 供後續 §0~§10 各段落讀取對應 `by_skill[<section>]` 規則清單
+- **Hard Gate**：checklist.json 存在且 `total_rules > 0` 時，§10 report-audit 必須產出 `core/learned/rule-hits.jsonl` 涵蓋所有規則的 avoided/violated/na 判定，否則拒絕交付（對齊 IR-027）
+- 新紀錄寫入 corrections/insights 時 MUST 含 `ttl_days`（預設 90）/ `scope` / `superseded_by` / `created` 欄位，並同步更新 mapping.json
+- 升級為 `skill-suggestions.jsonl` 的門檻：`confidence == "high"` 且 `applicable_to != "brand:<single>"`
+- 詳見 `openspec/specs/self-learning/spec.md` v3 與 `openspec/specs/orchestrator/spec.md` v2
 
 ### Fallback: 網路不可用
 - 如 git 操作失敗但 `~/SourceCode/Work/fontrends-analyst/core/` 存在 → 使用離線快取，顯示警告

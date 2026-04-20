@@ -1,7 +1,7 @@
 # FonTrends Analyst — File List
 
 > 品牌社群數據分析自動化系統。從數據擷取到報告產出的完整 pipeline。
-> 更新日期：2026-03-24
+> 更新日期：2026-04-08
 
 ## 目錄結構
 
@@ -168,6 +168,18 @@ fontrends-analyst/
 
 ---
 
+## core/learned/ — 學習紀錄（2026-04-08 升級，self-learning v3）
+
+| 檔案 | 說明 |
+|------|------|
+| `corrections.jsonl` | 具體修正紀錄（含 ttl_days / scope / superseded_by） |
+| `insights.jsonl` | 歸納性洞察（含 ttl_days / scope / superseded_by / confidence） |
+| `skill-suggestions.jsonl` | Skill 修改建議（升級門檻：confidence=high 且跨品牌） |
+| `audit-history.jsonl` | 稽核歷史（含 avoided_rate / regression_count / na_rate 趨勢指標） |
+| `rule-hits.jsonl` | **[新增]** 規則命中追蹤（avoided / violated / na / regression） |
+| `mapping.json` | **[新增]** 規則索引表（orchestrator pre-run O(1) 查詢） |
+| `archived/` | **[新增]** TTL 過期紀錄封存，可人工召回 |
+
 ## Run 數據結構（~/.fontrends/runs/{brand}-{date}/）
 
 ```
@@ -181,6 +193,7 @@ fontrends-analyst/
 ├── script.json             # 腳本規劃
 ├── narrative.json          # 敘事內容
 ├── run-status.json         # Pipeline 執行狀態
+├── checklist.json          # [新增] Pre-run checklist（orchestrator v2）
 ├── output-meta.json        # 產出 metadata
 ├── extraction-log.jsonl    # 擷取日誌
 ├── screenshots/            # Dashboard 截圖

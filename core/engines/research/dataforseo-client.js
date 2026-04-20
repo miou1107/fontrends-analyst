@@ -4,7 +4,7 @@
  * dataforseo-client.js — DataForSEO API Client
  *
  * Handles authentication, request/response, rate limiting, and error handling.
- * Reads credentials from .env > config.json > env vars
+ * Reads credentials from environment variables or the local .env file.
  */
 
 const https = require('https');
@@ -17,7 +17,7 @@ function loadCredentials() {
   const login = env.DATAFORSEO_LOGIN;
   const password = env.DATAFORSEO_PASSWORD;
   if (!login || !password) {
-    throw new Error('Missing DATAFORSEO_LOGIN or DATAFORSEO_PASSWORD in .env or config.json');
+    throw new Error('Missing DATAFORSEO_LOGIN or DATAFORSEO_PASSWORD in environment variables or .env');
   }
   return { login, password };
 }
@@ -41,7 +41,7 @@ async function apiPost(endpoint, payload, options = {}) {
     try {
       const result = await new Promise((resolve, reject) => {
         const req = https.request({
-          hostname: 'api.dataforseo.com',
+          hostname: env.DATAFORSEO_API_BASE_HOSTNAME,
           path: endpoint,
           method: 'POST',
           headers: {
