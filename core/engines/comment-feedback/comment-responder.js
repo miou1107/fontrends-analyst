@@ -1,6 +1,6 @@
 'use strict';
 
-function formatReply(summary, changes, { includeProfilePrompt = false } = {}) {
+function formatReply(summary, changes) {
   const lines = [`✅ 已調整：${summary}`];
   if (changes && changes.length > 0) {
     lines.push('');
@@ -8,10 +8,6 @@ function formatReply(summary, changes, { includeProfilePrompt = false } = {}) {
     for (const c of changes) {
       lines.push(`- ${c}`);
     }
-  }
-  if (includeProfilePrompt) {
-    lines.push('');
-    lines.push('💾 如果希望未來都這樣處理，請回覆 yes');
   }
   return lines.join('\n');
 }
