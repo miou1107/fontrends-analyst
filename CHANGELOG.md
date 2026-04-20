@@ -2,6 +2,23 @@
 
 本檔案記錄 fontrends-analyst 的重大變更，遵循 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/) 格式。
 
+## 2026-04-20 — 整併舊 repo 殘留內容
+
+### Added
+- `core/docs/superpowers/`：搬回 4 份 plans + 4 份 design specs（comment-feedback-mechanism、data-analysis-agent、purpose-binder、script-planner）
+- `core/frameworks/`：action-matrix.md、analysis-framework.md、interview-guide.md
+- `core/operations/`：browser-strategies.md、data-extraction.md、looker-operations.md
+- `core/tools/ppt-qa.sh`
+- `core/learned/formats/`：gdocs.md、gslides.md（Google Docs/Slides 格式規則）
+- `core/version.json`：版本資訊
+- `.mcp.json`：專案 MCP 配置（chrome-devtools）
+
+### Changed
+- `.gitignore`：新增 `.claude/worktrees/`（Claude Code 本機 worktree metadata）
+
+### Rationale
+昨天 commit b2a61f7 從舊 repo（fontrip-agentic-process-automation/Projects/fontrends-analyst）搬回 comment-feedback 模組時，遺漏了 docs/frameworks/operations/tools/learned/formats 等核心文件。比對新舊 repo 後確認這些內容僅存在於舊 repo，本次補搬完整。舊 repo 子目錄已刪除（262MB），monorepo 其他專案保留。
+
 ## 2026-04-08 — Self-Learning Gap Fixes
 
 **Plan:** `openspec/plans/2026-04-08-self-learning-gap-fixes.md`

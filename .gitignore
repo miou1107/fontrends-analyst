@@ -30,3 +30,6 @@ build/
 
 # Run data (large files, keep in ~/.fontrends/)
 runs/
+
+# Claude Code worktree metadata (local only)
+.claude/worktrees/

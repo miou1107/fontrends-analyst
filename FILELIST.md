@@ -1,7 +1,7 @@
 # FonTrends Analyst — File List
 
 > 品牌社群數據分析自動化系統。從數據擷取到報告產出的完整 pipeline。
-> 更新日期：2026-04-08
+> 更新日期：2026-04-20
 
 ## 目錄結構
 
@@ -10,7 +10,13 @@ fontrends-analyst/
 ├── core/                          # 核心引擎（Node.js）
 │   ├── engines/                   # 各模組引擎
 │   ├── schemas/                   # 報告頁面 schema + 驗證 schema
-│   └── templates/                 # 品牌色、簡報模板
+│   ├── templates/                 # 品牌色、簡報模板
+│   ├── frameworks/                # 分析框架文件（14 維度、訪談、行動矩陣）
+│   ├── operations/                # 操作 SOP（瀏覽器策略、資料擷取、Looker 操作）
+│   ├── tools/                     # 輔助工具（PPT QA 等）
+│   ├── docs/superpowers/          # 子模組 design plans + specs
+│   ├── learned/formats/           # 輸出格式規則（gdocs/gslides）
+│   └── version.json               # 核心版本資訊
 ├── openspec/                      # OpenSpec 規格文件
 │   ├── specs/                     # 21 個模組規格
 │   └── plans/                     # 實作計劃
@@ -122,6 +128,44 @@ fontrends-analyst/
 | `theme-default.json` | 預設主題（字型、間距、表格樣式） |
 | `ppt-template.md` | PPT 模板說明 |
 | `slides-template.md` | Slides 模板說明 |
+
+---
+
+## core/frameworks/ — 分析框架文件
+
+| 檔案 | 說明 |
+|------|------|
+| `action-matrix.md` | 行動矩陣（洞察 → 行動對照） |
+| `analysis-framework.md` | 14 維度品牌分析框架 |
+| `interview-guide.md` | 需求訪談引導手冊 |
+
+## core/operations/ — 操作 SOP
+
+| 檔案 | 說明 |
+|------|------|
+| `browser-strategies.md` | 瀏覽器自動化策略（Claude in Chrome、Antigravity 等） |
+| `data-extraction.md` | 資料擷取 SOP |
+| `looker-operations.md` | Looker Studio 操作手冊 |
+
+## core/tools/ — 輔助工具
+
+| 檔案 | 說明 |
+|------|------|
+| `ppt-qa.sh` | PPT 產出品質檢查腳本 |
+
+## core/docs/superpowers/ — 子模組 design docs
+
+| 目錄 | 說明 |
+|------|------|
+| `plans/` | 4 份實作計畫（comment-feedback, data-analysis-agent, purpose-binder, script-planner） |
+| `specs/` | 對應 4 份 design specs |
+
+## core/learned/formats/ — 輸出格式規則
+
+| 檔案 | 說明 |
+|------|------|
+| `gdocs.md` | Google Docs 輸出格式規則 |
+| `gslides.md` | Google Slides 輸出格式規則 |
 
 ---
 

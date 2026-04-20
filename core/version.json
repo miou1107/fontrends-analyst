@@ -1,0 +1,12 @@
+{
+  "version": "1.0.0",
+  "min_skill_version": "1.0.0",
+  "updated": "2026-03-18",
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2026-03-18",
+      "changes": ["Initial release: 14-dimension brand analysis framework, Looker Studio operations, PPT template"]
+    }
+  ]
+}
