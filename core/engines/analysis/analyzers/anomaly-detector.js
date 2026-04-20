@@ -1,10 +1,15 @@
 'use strict';
 const { mean, zScore, iqr } = require('../utils/stats');
 
-function detectAnomalies(metricName, values, opts = {}) {
-  if (!values || values.length < 3) return [];
+function detectAnomalies(metricName, values, opts = {}, snapshot) {
+  if (!snapshot || typeof snapshot.get !== 'function') {
+    throw new Error('[anomaly-detector] snapshot required');
+  }
+  const minPoints = snapshot.get('thresholds.anomaly.min_data_points');
+  if (!values || values.length < minPoints) return [];
+
   const method = opts.method || 'zscore';
-  const threshold = opts.threshold || 2.5;
+  const threshold = opts.threshold ?? snapshot.get('thresholds.anomaly.zscore_threshold');
   const anomalies = [];
 
   if (method === 'zscore') {

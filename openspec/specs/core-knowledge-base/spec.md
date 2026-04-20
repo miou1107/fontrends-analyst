@@ -1,5 +1,9 @@
 # Core Knowledge Base — 核心知識庫
 
+> **⚠️ 2026-04-20 分工更新：** 本 spec 管理「**文字型知識資產**」（framework / SOP / 模板 / 色彩），參數化的「**分析技巧 / 門檻 / 關鍵字 / 文案 / profile**」已獨立為 [knowledge-layer](../knowledge-layer/spec.md)。兩者互補：
+> - **core-knowledge-base**（本 spec）: `frameworks/`、`operations/`、`templates/`、`tools/`
+> - **knowledge-layer**（新）: `core/knowledge/{stances,modules,profiles,schema}/`、resolvers、pipeline runner、run context、outputs、logs、rerun / lineage
+
 ## Purpose
 
 管理品牌分析所需的分析框架、操作 SOP、報告模板、品牌色彩定義等知識資產。存放在 GitHub Private Repo，由管理者維護更新，用戶端自動同步。

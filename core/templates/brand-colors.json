@@ -6,6 +6,8 @@
     "hermes": { "name": "Hermès", "primary": "E8611A", "secondary": "1A1A1A", "dark_bg": "3D1C02", "light_bg": "FAF5EE", "accent": "D4A574", "text_on_dark": "FFFFFF", "text_on_light": "3D1C02" },
     "coach": { "name": "Coach", "primary": "8B0000", "secondary": "D4A853", "dark_bg": "2A0000", "light_bg": "FAF8F5", "accent": "C19A6B", "text_on_dark": "FFFFFF", "text_on_light": "2A0000" },
     "pandora": { "name": "Pandora", "primary": "4A1942", "secondary": "C7A96A", "dark_bg": "2A0A26", "light_bg": "FAF8F5", "accent": "C48DB8", "text_on_dark": "FFFFFF", "text_on_light": "2A0A26" },
-    "neutral": { "name": "中性專業", "primary": "1E3A5F", "secondary": "C8A951", "dark_bg": "1E3A5F", "light_bg": "F4F6F9", "accent": "BFA06A", "text_on_dark": "FFFFFF", "text_on_light": "1E3A5F" }
+    "neutral": { "name": "中性專業", "primary": "1E3A5F", "secondary": "C8A951", "dark_bg": "1E3A5F", "light_bg": "F4F6F9", "accent": "BFA06A", "text_on_dark": "FFFFFF", "text_on_light": "1E3A5F" },
+    "taipei-101": { "name": "台北 101 觀景台", "primary": "C8102E", "secondary": "D4A853", "dark_bg": "FAF7F2", "light_bg": "FFFFFF", "accent": "E8B04A", "text_on_dark": "1A1A1A", "text_on_light": "1A1A1A" },
+    "taipei-funpass": { "name": "Taipei FunPass", "primary": "FF6B35", "secondary": "004E89", "dark_bg": "004E89", "light_bg": "FFF4EC", "accent": "F7C59F", "text_on_dark": "FFFFFF", "text_on_light": "004E89" }
   }
 }

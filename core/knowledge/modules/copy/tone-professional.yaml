@@ -1,0 +1,137 @@
+# 專業語氣文案模板（對齊現有 code 值）
+# ${var} 為插值，loader 提供插值引擎
+
+_meta:
+  name: tone-professional
+  description: 正式、客觀、中長句、適合 marketing-lead / analyst
+  extends: null
+
+comment_reply:
+  success: "✅ 已調整：${summary}"
+  changes_header: "修改項目："
+  failure: "❌ 無法自動處理：${reason}"
+  suggestion_prefix: "建議："
+  cascade_delete: "✅ 該元素已被其他留言刪除，此留言無需處理"
+
+recommendations:
+  roles:
+    social_marketing: Journey101 數據團隊
+    brand_strategy: Journey101 數據團隊
+    data_analysis: Journey101 數據團隊
+    content_team: Journey101 數據團隊
+  timelines:
+    urgent: 1週內
+    near_term: 2週內
+    mid_term: 本月內
+    long_term: 下季度規劃
+  # 依 insight type 決定建議內容（analysis-engine.js:72-92）
+  by_insight_type:
+    decline:
+      priority: immediate
+      who_key: social_marketing
+      what: "針對${metric}下降趨勢，調整內容策略"
+      when: "2 週內"
+      kpi: "${metric} 回升至前期水準"
+    anomaly:
+      priority: verify
+      who_key: data_analysis
+      what: "驗證 ${metric} 異常值，確認是否為真實事件或數據源問題"
+      when: "1 週內"
+      kpi: "完成異常原因確認報告"
+    leader:
+      priority: opportunistic
+      who_key: brand_strategy
+      what: "維持 ${metric} 領先優勢，加碼投入"
+      when: "下季度規劃"
+      kpi: "維持市場排名第一"
+    laggard:
+      priority: medium_term
+      who_key: social_marketing
+      what: "針對 ${metric} 落後指標，制定追趕計畫"
+      when: "1-3 個月"
+      kpi: "${metric} 排名提升至前 50%"
+    growth:
+      priority: opportunistic
+      who_key: brand_strategy
+      what: "把握 ${metric} 成長動能，擴大投入"
+      when: "持續進行"
+      kpi: "維持成長趨勢"
+  # 通用補位建議（達不到最低數量時）
+  fillers:
+    immediate:
+      who_key: social_marketing
+      what: "檢視當前社群內容策略，確認與品牌目標一致"
+      when: "2 週內"
+      kpi: "完成策略檢視報告"
+      rationale: "基於整體分析結果的通用建議"
+      linked_dimensions: [social_overview]
+    verify:
+      who_key: data_analysis
+      what: "建立定期數據品質檢查流程"
+      when: "1 週內"
+      kpi: "每週數據品質報告"
+      rationale: "確保數據分析基礎穩固"
+      linked_dimensions: [social_overview]
+    medium_term:
+      who_key: brand_strategy
+      what: "制定下季度社群行銷計畫"
+      when: "1-3 個月"
+      kpi: "產出完整季度計畫書"
+      rationale: "基於整體分析結果的策略規劃"
+      linked_dimensions: [social_overview, trend]
+
+# 分析品質警示（analysis-engine.js:228）
+quality_caveats:
+  - "語言偵測準確率約 85-90%"
+  - "情緒分析無法偵測反諷與語碼轉換"
+  - "market_share_estimate 為社群聲量佔比（SOV），非實際營收市佔"
+
+# Insight 生成模板（對齊 insight-generator.js:34-92）
+insight_templates:
+  period_labels:
+    mom: MoM
+    qoq: QoQ
+    yoy: YoY
+  growth: "${metric} ${period} 成長 ${pct}%"
+  decline: "${metric} ${period} 下降 ${pct}%，需關注趨勢變化"
+  anomaly: "${metric} 出現異常值（${value}），為預期值的 ${mult} 倍，建議確認是否有特殊事件"
+  leader: "在 ${total} 個競品中 ${metric} 排名第一"
+  laggard: "${metric} 在 ${total} 個競品中排名第 ${rank}"
+  correlation_strong: "${metricA} 與 ${metricB} 呈高度${direction}相關（r=${r}）"
+  correlation_moderate: "${metricA} 與 ${metricB} 呈中度${direction}相關（r=${r}）"
+  correlation_direction_positive: 正
+  correlation_direction_negative: 負
+
+# Headline 模板（script-planner/headline-generator.js）
+headline_templates:
+  anomaly: "${metric} 異常飆升 ${mult} 倍"
+  decline_with_pct: "${metric} 下滑 ${pct}%"
+  decline_no_pct: "${metric} 呈下降趨勢"
+  decline_fallback: "${title}下滑"
+  growth_with_pct: "${metric} 成長 ${pct}%"
+  growth_no_pct: "${metric} 持續成長"
+  growth_fallback: "${title}成長"
+  leader_with_metric: "${metric} 領先市場"
+  leader_fallback: "${title}領先"
+  laggard_with_metric: "${metric} 有待加強"
+  laggard_fallback: "${title}有待加強"
+
+# Hook direction / sentiment labels（purpose-binder/hook-generator.js）
+hook_labels:
+  direction_sell_venue:
+    growth: 成長
+    decline: 下滑
+    default: 波動
+  direction_brand_review:
+    growth: 成長
+    decline: 下滑
+    default: 持平
+  sentiment_eval:
+    positive: 正向
+    negative: 偏負
+    neutral: 中性
+
+# Narrative 章節模板（9 chapter，對齊 narrative-normalizer.js:45-95）
+# 暫以 placeholder，Phase 3 搬 narrative-normalizer 時再填詳細模板
+narrative_chapters:
+  _note: "詳細模板待 narrative-normalizer 搬遷時填入"

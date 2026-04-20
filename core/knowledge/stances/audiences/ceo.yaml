@@ -1,0 +1,9 @@
+_meta:
+  name: ceo
+  description: CEO / 高層決策者
+
+role: ceo
+expertise: executive          # executive / practitioner / expert
+attention_budget: low         # low=3min / medium=10min / high=deep
+language_preference: zh-TW
+decision_authority: strategic

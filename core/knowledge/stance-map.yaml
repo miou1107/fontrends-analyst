@@ -1,0 +1,83 @@
+# Stance → Modules 查表（純 lookup / merge，無 AI 判斷）
+# 當 profile 指定 stance 時，resolver 依此表產出 module 組合與 overrides
+#
+# overrides 的 key 一律用完整 dotted path（如 thresholds.scoring.max_insights）
+# 不要省略命名空間，避免歧義。
+
+_meta:
+  description: 描述符 → 具體配方的翻譯規則
+  merge_strategy:
+    dimensions: union
+    keywords: union
+    copy: last-wins
+    overrides: deep-merge
+
+# ─────────────────────────────────────────────
+# Audience → 配方
+# ─────────────────────────────────────────────
+audience:
+  ceo:
+    copy: tone-executive-brief
+    density: sparse
+    thresholds_variant: growth-conservative
+    overrides:
+      thresholds.scoring.max_insights: 3
+      thresholds.scoring.recommendations.max_total: 6
+
+  marketing-lead:
+    copy: tone-professional
+    density: standard
+    thresholds_variant: standard
+
+  analyst:
+    copy: tone-professional
+    density: deep
+    thresholds_variant: standard
+    overrides:
+      thresholds.scoring.max_insights: 15
+
+  agency-client:
+    copy: tone-professional
+    density: standard
+    thresholds_variant: standard
+
+# ─────────────────────────────────────────────
+# Purpose → 配方
+# ─────────────────────────────────────────────
+purpose:
+  decision-support:
+    overrides:
+      thresholds.scoring.recommendations.require_action: true
+    must_include_sections: [recommendations, risks, options]
+
+  diagnosis:
+    overrides:
+      thresholds.correlation.strength_threshold: 0.5
+    must_include_sections: [root_cause, cross_validation]
+
+  monitoring:
+    overrides:
+      thresholds.anomaly.zscore_threshold: 2.0
+    must_include_sections: [trend, anomalies, alerts]
+
+  pitch:
+    copy: tone-professional
+    overrides:
+      thresholds.scoring.max_insights: 5
+
+# ─────────────────────────────────────────────
+# Focus → 配方
+# ─────────────────────────────────────────────
+focus:
+  competitive:
+    dimensions: competitive-7d
+    overrides:
+      thresholds.scoring.signal_weights.compete: 0.30
+
+  brand-health:
+    dimensions_append: [sentiment, content]
+    overrides:
+      thresholds.anomaly.zscore_threshold: 2.0
+
+  performance:
+    dimensions_emphasize: [engagement, reach]

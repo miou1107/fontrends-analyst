@@ -1,5 +1,7 @@
 # 內容回饋與自我學習 — Self Learning
 
+> **⚠️ 2026-04-20 升級：** Learned rules MUST 以 overlay 形式套用到 [knowledge-layer](../knowledge-layer/spec.md) 的 snapshot（優先級第 5 層，介於 profile.overrides 與 CLI flag 之間），可 scope 到特定 audience/purpose/profile。學到的修正不再單獨用、而是融入 resolver 鏈。
+
 ## Input / Output Contract
 
 ### Input

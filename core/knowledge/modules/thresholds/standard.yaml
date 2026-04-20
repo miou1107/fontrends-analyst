@@ -1,0 +1,168 @@
+# 基準門檻值 — 對齊 2026-04-20 現有 code
+# 所有值分為 6 命名空間：anomaly / correlation / scoring / learning / format / pipeline
+# 其他 thresholds 變體（growth-sensitive 等）只需 override 需要改的 key
+
+_meta:
+  name: standard
+  description: 對齊現有 code 行為的基準門檻
+  extends: null
+
+# ─────────────────────────────────────────────
+# 異常偵測
+# ─────────────────────────────────────────────
+anomaly:
+  zscore_threshold: 2.5              # anomaly-detector.js:8
+  # 各 dimension 用哪種偵測方法（analysis-engine.js:20-24）
+  per_dimension_method:
+    social_overview: zscore
+    trend: zscore
+    language: zscore
+    platform: zscore
+    kol: iqr
+    sentiment: zscore
+    search: zscore
+    competitor: zscore
+
+# Confidence 對照（analysis-engine.js:232）
+confidence_scores:
+  high: 0.95
+  medium: 0.75
+  low: 0.5
+
+# ─────────────────────────────────────────────
+# 相關性分析
+# ─────────────────────────────────────────────
+correlation:
+  strength_threshold: 0.7            # cross-analyzer.js:4 + insight-generator.js:120
+  moderate_threshold: 0.4            # cross-analyzer.js:5
+  confidence_threshold: 0.7          # insight-generator.js:120
+
+# ─────────────────────────────────────────────
+# 評分 / 權重（script-planner + scorers + insight）
+# ─────────────────────────────────────────────
+scoring:
+  # Signal scorer 主權重（script-planner/scorers/signal-scorer.js:4-7）
+  signal_weights:
+    insights: 0.35
+    anomalies: 0.25
+    change: 0.25
+    compete: 0.15
+
+  # Signal scorer 除法門檻（line 9-11）
+  signal_divisions:
+    insights: 3
+    anomalies: 2
+    changes: 50
+
+  # 其他 script-planner 常數
+  exclude_threshold: 0.1             # script-planner.js:44
+  insufficient_epsilon: 0.01         # :45
+  data_presence_bonus: 0.35          # :46
+
+  # Intent scorer（intent-scorer.js:12,15）
+  intent_boost_focused_multiplier: 1.5
+  purpose_factor:
+    base: 0.5
+    relevance_coef: 0.5
+
+  # Cross-analyzer 分數（cross-analyzer.js:7-12）
+  cross_analysis:
+    base_score: 50
+    positive_adjustment: 15
+    negative_adjustment: 10
+
+  # Cross-analyzer 四象限（:14-17）
+  competitive_quadrants:
+    leader: 70         # >=70
+    challenger: 50     # >=50
+    niche: 30          # >=30
+    # else: follower
+
+  # 競品優勢（competitor-comparator.js:8）
+  competitor_advantage_multiplier: 1.05
+
+  # Self comparator 預設（self-comparator.js:7）
+  self_comparison_threshold: 1
+
+  # Hook sentiment（purpose-binder/hook-generator.js:3-4）
+  hook_sentiment:
+    positive: 0.3     # >0.3 算正向
+    negative: -0.1    # <-0.1 算偏負
+
+  # Purpose-binder signal strength 等級
+  purpose_signal_levels:
+    has_anomaly: 1.0
+    has_growth_or_decline: 0.8
+    has_any_data: 0.5
+    default: 0.2
+
+  # Insight 門檻
+  growth_decline_detection: 10       # insight-generator.js:45，單位 %
+  max_insights: 5                    # :5
+  significant_change: 10             # block-assigner.js:8，單位 %
+
+  # Narrative site average（narrative-normalizer.js:20）
+  site_average_engagement: 598000
+
+  # Recommendation 上下限（analysis-engine.js:32-37）
+  recommendations:
+    min_immediate: 2
+    min_verify: 1
+    min_total: 6
+    max_total: 12
+
+# ─────────────────────────────────────────────
+# 學習引擎（self-learning / learning-capture）
+# ─────────────────────────────────────────────
+learning:
+  pattern_detection_min_count: 3      # learning-engine.js:107
+  text_replace_min_count: 2           # :164
+  category_pattern_min_count: 2       # :188
+  audit_rule_min_count: 3             # :209
+  style_rule_min_count: 3             # :229
+
+  # Confidence 公式參數
+  confidence_divisor: 5               # Math.min(count/5, 1)
+  rule_confidence_multiplier: 0.2     # learning-capture.js:25，= 1/5
+
+  # 自動規則生成門檻（learning-capture.js:28-35）
+  auto_rule_thresholds:
+    text_replace: 2
+    value_check: 3
+    style: 3
+
+  # Correction schema version（learning-capture.js:3）
+  correction_schema_version: 2
+
+# ─────────────────────────────────────────────
+# 格式化（narrative-normalizer / general）
+# ─────────────────────────────────────────────
+format:
+  number_wan_threshold: 10000         # narrative-normalizer.js:10
+  percentage_decimals: 1              # :15
+  hook_character_limit: 30            # hook-generator.js:5
+
+# ─────────────────────────────────────────────
+# Pipeline 執行
+# ─────────────────────────────────────────────
+pipeline:
+  execution_timeout_ms: 120000        # orchestrator.js:67
+  # stage_definitions 由 profile.pipeline 決定，不放這裡
+
+# ─────────────────────────────────────────────
+# Intent classifier（comment-feedback）
+# ─────────────────────────────────────────────
+intent_classification:
+  confidence_high: 0.8                # intent-classifier.js:21
+  confidence_low: 0.5                 # :30
+  # Classification iteration order（原 KEYWORD_RULES 陣列順序）：
+  # 決定 classify 時先檢查哪個 intent 的關鍵字
+  classification_order: [delete, structure, question, style, content]
+  # Processing order（原 INTENT_ORDER）：
+  # 決定 classify 完後的處理順序（delete 先做，避免後續 style 改到已刪的東西）
+  processing_order:
+    delete: 0
+    structure: 1
+    content: 2
+    style: 3
+    question: 4

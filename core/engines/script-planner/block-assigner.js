@@ -1,6 +1,7 @@
 'use strict';
 
-function assignBlocks(dimension, analysisDimId = '', recommendations = []) {
+function assignBlocks(dimension, analysisDimId = '', recommendations = [], snapshot) {
+  const sigThreshold = snapshot?.get?.('thresholds.scoring.significant_change') ?? 10;
   const blocks = [];
   const excluded = [];
 
@@ -34,7 +35,7 @@ function assignBlocks(dimension, analysisDimId = '', recommendations = []) {
   const mom = dimension.self_comparison?.mom;
   if (mom && typeof mom === 'object') {
     for (const val of Object.values(mom)) {
-      if (val && typeof val.change_pct === 'number' && Math.abs(val.change_pct) > 10) {
+      if (val && typeof val.change_pct === 'number' && Math.abs(val.change_pct) > sigThreshold) {
         hasSignificantChange = true;
         break;
       }

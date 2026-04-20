@@ -1,33 +1,40 @@
 'use strict';
 
 const { classifyIntent, sortByProcessingOrder, groupByTarget, resolveContradictions } = require('../intent-classifier');
+const { resolveProfile } = require('../../../knowledge-loader');
+
+const snap = resolveProfile('brand-social');
 
 describe('classifyIntent', () => {
   test('classifies style comment', () => {
-    const result = classifyIntent('字太小，改成 36pt', { type: 'textBox', text: '標題' });
+    const result = classifyIntent('字太小，改成 36pt', { type: 'textBox', text: '標題' }, snap);
     expect(result.intent).toBe('style');
     expect(result.confidence).toBeGreaterThan(0);
     expect(result.action).toBeTruthy();
   });
 
   test('classifies content comment', () => {
-    const result = classifyIntent('數字錯了，應該是 2,500 不是 3,000', { type: 'textBox', text: '3,000' });
+    const result = classifyIntent('數字錯了，應該是 2,500 不是 3,000', { type: 'textBox', text: '3,000' }, snap);
     expect(result.intent).toBe('content');
   });
 
   test('classifies delete comment', () => {
-    const result = classifyIntent('這頁刪掉', { type: 'slide', elements: [] });
+    const result = classifyIntent('這頁刪掉', { type: 'slide', elements: [] }, snap);
     expect(result.intent).toBe('delete');
   });
 
   test('classifies structure comment', () => {
-    const result = classifyIntent('把這頁移到前面', { type: 'slide', elements: [] });
+    const result = classifyIntent('把這頁移到前面', { type: 'slide', elements: [] }, snap);
     expect(result.intent).toBe('structure');
   });
 
   test('classifies question comment', () => {
-    const result = classifyIntent('這個數據是從哪裡來的？', { type: 'textBox', text: '2,700,000' });
+    const result = classifyIntent('這個數據是從哪裡來的？', { type: 'textBox', text: '2,700,000' }, snap);
     expect(result.intent).toBe('question');
+  });
+
+  test('throws when snapshot is missing (L3 engine SoC guard)', () => {
+    expect(() => classifyIntent('test')).toThrow(/snapshot required/);
   });
 });
 
@@ -40,7 +47,7 @@ describe('sortByProcessingOrder', () => {
       { id: '4', classified: { intent: 'content' } },
       { id: '5', classified: { intent: 'structure' } },
     ];
-    const sorted = sortByProcessingOrder(comments);
+    const sorted = sortByProcessingOrder(comments, snap);
     expect(sorted.map(c => c.classified.intent)).toEqual([
       'delete', 'structure', 'content', 'style', 'question',
     ]);
@@ -51,7 +58,7 @@ describe('sortByProcessingOrder', () => {
       { id: 'a', classified: { intent: 'style' } },
       { id: 'b', classified: { intent: 'style' } },
     ];
-    const sorted = sortByProcessingOrder(comments);
+    const sorted = sortByProcessingOrder(comments, snap);
     expect(sorted.map(c => c.id)).toEqual(['a', 'b']);
   });
 });

@@ -1,24 +1,26 @@
 'use strict';
 
-const INTENT_ORDER = { delete: 0, structure: 1, content: 2, style: 3, question: 4 };
+// Intent Classifier — L3 Engine
+// 所有規則 / 關鍵字 / 門檻從 knowledge snapshot 讀取。
+// 詳見 openspec/specs/knowledge-layer/spec.md
 
-const KEYWORD_RULES = [
-  { intent: 'delete', keywords: ['刪掉', '刪除', '移除', '拿掉', 'remove', 'delete'] },
-  { intent: 'structure', keywords: ['移到', '搬到', '加一頁', '新增頁', '調換', '順序', 'move', 'reorder'] },
-  { intent: 'question', keywords: ['？', '?', '為什麼', '哪裡來', '是不是', 'why', 'how', 'what'] },
-  { intent: 'style', keywords: ['字型', '字體', '顏色', '大小', '粗體', '間距', 'pt', 'font', 'color', 'bold', 'size'] },
-  { intent: 'content', keywords: ['錯了', '改成', '應該是', '換成', '更新', '修改', 'wrong', 'change', 'update'] },
-];
+function classifyIntent(commentText, elementContext, snapshot) {
+  assertSnapshot(snapshot);
 
-function classifyIntent(commentText, elementContext) {
   const text = (commentText || '').toLowerCase();
+  const intents = snapshot.get('keywords.intents');
+  const confidenceHigh = snapshot.get('thresholds.intent_classification.confidence_high');
+  const confidenceLow = snapshot.get('thresholds.intent_classification.confidence_low');
+  const classificationOrder = snapshot.get('thresholds.intent_classification.classification_order');
 
-  for (const { intent, keywords } of KEYWORD_RULES) {
+  // 依 classification_order 檢查，命中即回（保持和舊 code 完全相同的優先序）
+  for (const intent of classificationOrder) {
+    const keywords = intents[intent]?.keywords || [];
     if (keywords.some(kw => text.includes(kw))) {
       return {
         intent,
         action: commentText,
-        confidence: 0.8,
+        confidence: confidenceHigh,
         targetDescription: elementContext?.text || elementContext?.type || 'unknown',
       };
     }
@@ -27,15 +29,17 @@ function classifyIntent(commentText, elementContext) {
   return {
     intent: 'content',
     action: commentText,
-    confidence: 0.5,
+    confidence: confidenceLow,
     targetDescription: elementContext?.text || elementContext?.type || 'unknown',
   };
 }
 
-function sortByProcessingOrder(classifiedComments) {
+function sortByProcessingOrder(classifiedComments, snapshot) {
+  assertSnapshot(snapshot);
+  const order = snapshot.get('thresholds.intent_classification.processing_order');
   return [...classifiedComments].sort((a, b) => {
-    const orderA = INTENT_ORDER[a.classified?.intent] ?? 99;
-    const orderB = INTENT_ORDER[b.classified?.intent] ?? 99;
+    const orderA = order[a.classified?.intent] ?? 99;
+    const orderB = order[b.classified?.intent] ?? 99;
     return orderA - orderB;
   });
 }
@@ -70,4 +74,10 @@ function resolveContradictions(group) {
   return { winner: null, overridden: [] };
 }
 
-module.exports = { classifyIntent, sortByProcessingOrder, INTENT_ORDER, groupByTarget, resolveContradictions };
+function assertSnapshot(snapshot) {
+  if (!snapshot || typeof snapshot.get !== 'function') {
+    throw new Error('[intent-classifier] snapshot required — engines must receive knowledge snapshot from loader');
+  }
+}
+
+module.exports = { classifyIntent, sortByProcessingOrder, groupByTarget, resolveContradictions };

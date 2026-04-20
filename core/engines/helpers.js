@@ -110,6 +110,36 @@ const DRIVE_FULL_SCOPE = 'https://www.googleapis.com/auth/drive';
 const env = require('./env');
 const TOKEN_PATH = env.GOOGLE_TOKEN_PATH;
 const CREDENTIALS_PATH = env.GOOGLE_CREDENTIALS_PATH;
+const SERVICE_ACCOUNT_PATH = process.env.GOOGLE_SERVICE_ACCOUNT_PATH
+  || (require('os').homedir() + '/.fontrends/journey101-ai-bot-key.json');
+
+/**
+ * Get Service Account auth (Journey101 AI Bot 身份)
+ *
+ * 用於：AI 自動回覆留言 / 自動維護報告時，身份顯示為「Journey101 AI Bot」
+ * 不是 Vin 本人。讓留言討論串看得出哪些是人、哪些是 AI。
+ *
+ * 前提：
+ * - 要操作的 Google Drive 檔案必須已分享給 SA email（編輯權限）
+ * - SA email: journey101-ai-bot@fontrip-fapa.iam.gserviceaccount.com
+ */
+async function getServiceAccountAuth(scopes) {
+  const { google } = require('googleapis');
+  if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) {
+    throw new Error(`Service account key 不存在：${SERVICE_ACCOUNT_PATH}`);
+  }
+  const auth = new google.auth.GoogleAuth({
+    keyFile: SERVICE_ACCOUNT_PATH,
+    scopes,
+  });
+  return auth;
+}
+
+function getServiceAccountEmail() {
+  if (!fs.existsSync(SERVICE_ACCOUNT_PATH)) return null;
+  const key = JSON.parse(fs.readFileSync(SERVICE_ACCOUNT_PATH, 'utf8'));
+  return key.client_email;
+}
 
 /**
  * Get authenticated Google OAuth2 client
@@ -307,6 +337,7 @@ module.exports = {
   readJSON, writeJSON,
   // OAuth
   getGoogleAuth, TOKEN_PATH, CREDENTIALS_PATH,
+  getServiceAccountAuth, getServiceAccountEmail, SERVICE_ACCOUNT_PATH,
   // Formatting
   formatNumber, formatPct,
   // Drive

@@ -1,0 +1,7 @@
+_meta:
+  name: competitive
+  description: 著重競爭態勢（SOV / gap / 對手動作）
+
+dimensions_emphasize: [share_of_voice, competitor]
+keywords_append: []               # 需要時可加 competitive-specific keywords module
+must_show: [competitive_gap, positioning_quadrant]

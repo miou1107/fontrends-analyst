@@ -1,0 +1,8 @@
+_meta:
+  name: diagnosis
+  description: 診斷問題根因（為什麼掉粉 / 互動下滑 / 聲量弱）
+
+must_include_sections: [root_cause, cross_validation, evidence_chain]
+emphasize: [causality, anomalies, correlations]
+deemphasize: [forward_recommendations]
+require_evidence_chain: true

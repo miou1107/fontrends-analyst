@@ -1,0 +1,34 @@
+# 樣板 profile — 品牌社群季報（給 CEO 看）
+# 使用 stance 模式，示範兩段式解析
+
+_meta:
+  name: brand-social-for-ceo
+  description: 品牌社群分析 — CEO 決策支援版
+  kind: stance-mode
+
+stance:
+  audience: ceo
+  purpose: decision-support
+  focus: [competitive, brand-health]
+
+# 額外加載（stance 不會帶的通用資料）
+extends:
+  dimensions: [competitive-7d, metric-labels, script-pages, purpose-affinity]
+  keywords: [intent-base]
+  copy: [tone-executive-brief, hook-templates, narrative-chapters]
+  time_windows: standard
+
+# Profile 專屬微調（覆蓋 stance-map 產出）
+overrides:
+  thresholds.scoring.growth_decline_detection: 15    # 更保守
+
+pipeline:
+  - data-extraction
+  - analysis-engine
+  - anomaly-detector
+  - insight-generator
+  - purpose-binder
+  - script-planner
+  - narrative-packaging
+  - presentation-generator
+  - report-audit

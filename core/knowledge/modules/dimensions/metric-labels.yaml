@@ -1,0 +1,46 @@
+# 指標欄位 → 中文標籤對照
+# 對齊 insight-generator.js:5-15 的 METRIC_LABELS
+# 為何不放 canonical：這些是細粒度指標（engagement_rate 等），
+# canonical 只管 8 個大維度。兩者分層：dimensions 管 8 類；metric-labels 管 30+ 細指標
+
+_meta:
+  name: metric-labels
+  description: 細粒度指標欄位（30+ 個）的中文標籤對照
+
+# page_key → dimension id 對應（analysis-engine.js:13-18）
+page_key_map:
+  social_overview: social_overview
+  language_distribution: language
+  trend: trend
+  platform: platform
+  kol: kol
+  sentiment: sentiment
+  search_intent: search
+  competitor_data: competitor
+
+labels:
+  engagement_rate: 互動率
+  avg_interaction_per_post: 平均互動數
+  influence_density: 影響力密度
+  growth_rate: 成長率
+  dominant_language_pct: 主要語言佔比
+  concentration_index: 平台集中度
+  top_kol_contribution_pct: Top KOL 貢獻比
+  net_sentiment_score: 淨好感度
+  search_volume_index: 搜尋量指數
+  influence: 影響力
+  momentum_score: 聲量動能
+  total_months: 趨勢月數
+  kol_influence: KOL 影響力
+  positive_ratio: 正面好感比
+  negative_ratio: 負面比例
+  neutral_ratio: 中性比例
+  market_share_estimate: 市場聲量佔比
+  platform_efficiency: 平台效率
+  language_diversity_index: 語系多樣性
+  kol_coverage: KOL 覆蓋率
+  total_interactions: 總互動數
+  posts: 發文數
+  likes: 讚數
+  comments: 留言數
+  shares: 分享數

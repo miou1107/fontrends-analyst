@@ -1,3 +1,6 @@
+const { resolveProfile } = require('../../../knowledge-loader');
+const snap = resolveProfile('brand-social');
+
 const { analyzeCross } = require('../analyzers/cross-analyzer');
 
 describe('cross-analyzer', () => {
@@ -11,19 +14,19 @@ describe('cross-analyzer', () => {
     const result = analyzeCross(dimensions, {
       monthly_influence: [20000, 180000, 350000, 950000, 950000],
       monthly_search: [10000, 90000, 200000, 500000, 480000],
-    });
+    }, snap);
     expect(result.correlations.length).toBeGreaterThan(0);
     expect(result.correlations[0].correlation).toBeDefined();
     expect(result.correlations[0].strength).toMatch(/strong|moderate|weak/);
   });
 
   test('skips correlation when n < 5', () => {
-    const result = analyzeCross(dimensions, { monthly_influence: [100, 200, 300], monthly_search: [50, 100, 150] });
+    const result = analyzeCross(dimensions, { monthly_influence: [100, 200, 300], monthly_search: [50, 100, 150] }, snap);
     expect(result.correlations).toEqual([]);
   });
 
   test('computes market position', () => {
-    const result = analyzeCross(dimensions, {});
+    const result = analyzeCross(dimensions, {}, snap);
     expect(result.market_position.overall_score).toBeGreaterThanOrEqual(0);
     expect(result.market_position.overall_score).toBeLessThanOrEqual(100);
     expect(result.market_position.quadrant).toMatch(/leader|challenger|niche|follower/);
@@ -32,7 +35,7 @@ describe('cross-analyzer', () => {
   });
 
   test('returns empty structure for null dimensions', () => {
-    const result = analyzeCross(null, {});
+    const result = analyzeCross(null, {}, snap);
     expect(result.correlations).toEqual([]);
     expect(result.market_position.overall_score).toBe(0);
   });

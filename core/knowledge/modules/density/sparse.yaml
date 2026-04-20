@@ -1,0 +1,20 @@
+_meta:
+  name: sparse
+  description: 精簡密度 — 給 CEO / 高層（3 洞察 / 3-6 建議 / 短文案）
+  extends: standard
+
+_overrides:
+  thresholds.scoring.max_insights: 3
+  thresholds.scoring.recommendations.min_total: 3
+  thresholds.scoring.recommendations.max_total: 6
+
+output:
+  text_lines_per_slide: 4
+  charts_per_slide: 1
+  max_rows_per_table: 5
+  include_appendix: false
+  include_methodology: false
+  include_data_sources: false
+  executive_summary_target_length: 150
+  chapter_paragraph_min: 1
+  chapter_paragraph_max: 2

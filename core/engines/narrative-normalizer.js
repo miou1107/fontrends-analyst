@@ -15,55 +15,103 @@
 // 工具函式
 // ══════════════════════════════════════════════════════
 
+// Thresholds 與 site_average 從 snapshot 讀取（延遲取值，避免 require cycle）
+// 其他 chapter templates 仍寫在 code（未來可透過 template DSL 完全外化）
+let _snapshot = null;
+function _getSnap() {
+  if (_snapshot) return _snapshot;
+  try {
+    const { resolveProfile } = require('../knowledge-loader');  // 會 fail 時退回 defaults
+    _snapshot = resolveProfile('brand-social');
+  } catch {
+    _snapshot = null;
+  }
+  return _snapshot;
+}
+
 function fmt(n) {
   if (n == null || isNaN(n)) return 'N/A';
-  if (n >= 10000) return (n / 10000).toFixed(1) + '萬';
+  const snap = _getSnap();
+  const wanThreshold = snap?.get?.('thresholds.format.number_wan_threshold') ?? 10000;
+  if (n >= wanThreshold) return (n / wanThreshold).toFixed(1) + '萬';
   return n.toLocaleString();
 }
 
 function pct(n) {
   if (n == null || isNaN(n)) return 'N/A';
-  return (n * 100).toFixed(1) + '%';
+  const snap = _getSnap();
+  const decimals = snap?.get?.('thresholds.format.percentage_decimals') ?? 1;
+  return (n * 100).toFixed(decimals) + '%';
+}
+
+function _siteAverage() {
+  const snap = _getSnap();
+  return snap?.get?.('thresholds.scoring.site_average_engagement') ?? 598000;
 }
 
 // ══════════════════════════════════════════════════════
 // 內容補齊：根據 chapter.id 從 data 自動產出
 // ══════════════════════════════════════════════════════
 
+// 用 template engine 替換文案，模板來自 snapshot.copy.chapter_templates
+function _applyChapterTemplate(ch, chId, vars, snap) {
+  const warnings = [];
+  const templates = snap?.get?.('copy.chapter_templates') || {};
+  const tpl = templates[chId];
+  if (!tpl) return warnings;
+
+  const { render } = require('../template-engine');
+
+  if (!ch.so_what && tpl.so_what) {
+    const rendered = render(tpl.so_what, vars);
+    if (rendered) {
+      ch.so_what = rendered;
+      warnings.push(`enriched ${chId}.so_what`);
+    }
+  }
+  if (!ch.action_link && tpl.action_link) {
+    const rendered = render(tpl.action_link, vars);
+    if (rendered) {
+      ch.action_link = rendered;
+      warnings.push(`enriched ${chId}.action_link`);
+    }
+  }
+  return warnings;
+}
+
 function enrichChapter(ch, { data, analysis, interview } = {}) {
   if (!data || !data.pages) return [];
   const warnings = [];
+  const snap = _getSnap();
   const brand = data.meta?.brand || interview?.brand || '';
   const competitor = data.meta?.competitor || interview?.competitor || '';
   const so = data.pages?.social_overview?.data || {};
-  // 競品數據可能在 data.pages.social_overview.data 或直接在 data.data 下
   const compRaw = data.competitor_data?.data || {};
   const comp = compRaw.pages?.social_overview?.data || compRaw;
 
+  // 對每個章節：計算 vars → 套 template → 特殊的 data_table 個別處理
   switch (ch.id) {
     case 'social_overview': {
-      if (!ch.so_what) {
-        const avg = 598000; // 全站平均（來自 LS 固定值，未來可動態）
-        const multiplier = so.influence && avg ? (so.influence / avg).toFixed(1) : null;
-        ch.so_what = multiplier
-          ? `${brand} 影響力 ${fmt(so.influence)}，為全站平均 ${fmt(avg)} 的 ${multiplier} 倍，顯示品牌在場域具有顯著社群主導力。`
-          : `${brand} 累計影響力 ${fmt(so.influence)}，社群能見度表現亮眼。`;
-        warnings.push(`enriched social_overview.so_what`);
-      }
-      if (!ch.action_link) {
-        ch.action_link = '建議持續監控月度影響力趨勢，在高峰月份前加碼社群內容投入。';
-        warnings.push(`enriched social_overview.action_link`);
-      }
+      const avg = _siteAverage();
+      const multiplier = so.influence && avg ? (so.influence / avg).toFixed(1) : null;
+      const vars = {
+        brand, competitor,
+        influence_str: fmt(so.influence),
+        avg_str: fmt(avg),
+        multiplier,
+      };
+      warnings.push(..._applyChapterTemplate(ch, 'social_overview', vars, snap));
       if (!ch.data_table && so.influence) {
+        const compLabel = competitor || (snap?.get?.('copy.chapter_templates.social_overview.data_table_headers')?.[2]) || '競品';
         ch.data_table = {
-          headers: ['指標', brand, competitor || '競品', '倍數'],
+          headers: ['指標', brand, compLabel, '倍數'],
           rows: [
             ['影響力指數', fmt(so.influence), fmt(comp.influence), comp.influence ? (so.influence / comp.influence).toFixed(1) + 'x' : 'N/A'],
             ['發文數', fmt(so.posts), fmt(comp.posts), comp.posts ? (so.posts / comp.posts).toFixed(1) + 'x' : 'N/A'],
             ['讚數', fmt(so.likes), fmt(comp.likes), ''],
             ['留言數', fmt(so.comments), fmt(comp.comments), ''],
-            ['分享數', fmt(so.shares), fmt(comp.shares), '']
-          ]
+            ['分享數', fmt(so.shares), fmt(comp.shares), ''],
+          ],
         };
         warnings.push(`enriched social_overview.data_table`);
       }
@@ -72,21 +120,23 @@ function enrichChapter(ch, { data, analysis, interview } = {}) {
 
     case 'monthly_trend': {
       const monthly = so.monthly || [];
-      if (!ch.so_what && monthly.length > 0) {
+      let vars = { brand };
+      if (monthly.length > 0) {
         const peak = monthly.reduce((a, b) => a.influence > b.influence ? a : b);
         const trough = monthly.reduce((a, b) => a.influence < b.influence ? a : b);
         const ratio = trough.influence > 0 ? (peak.influence / trough.influence).toFixed(1) : 'N/A';
-        ch.so_what = `高峰月份 ${peak.month}（影響力 ${fmt(peak.influence)}），低谷 ${trough.month}（${fmt(trough.influence)}），峰谷比 ${ratio} 倍。波動幅度大，需在淡季主動維持聲量。`;
-        warnings.push(`enriched monthly_trend.so_what`);
+        vars = {
+          brand,
+          peak_month: peak.month, peak_str: fmt(peak.influence),
+          trough_month: trough.month, trough_str: fmt(trough.influence),
+          ratio,
+        };
       }
-      if (!ch.action_link) {
-        ch.action_link = '建議在歷史高峰月份前 1 個月提前佈局社群內容，淡季加碼短影音維持基本聲量。';
-        warnings.push(`enriched monthly_trend.action_link`);
-      }
+      warnings.push(..._applyChapterTemplate(ch, 'monthly_trend', vars, snap));
       if (!ch.data_table && monthly.length > 0) {
         ch.data_table = {
           headers: ['月份', '影響力', '發文數', '讚數'],
-          rows: monthly.slice(0, 6).map(m => [m.month, fmt(m.influence), fmt(m.posts), fmt(m.likes)])
+          rows: monthly.slice(0, 6).map(m => [m.month, fmt(m.influence), fmt(m.posts), fmt(m.likes)]),
         };
         warnings.push(`enriched monthly_trend.data_table`);
       }
@@ -95,112 +145,73 @@ function enrichChapter(ch, { data, analysis, interview } = {}) {
 
     case 'sentiment': {
       const sentimentRaw = data.pages?.sentiment?.data || {};
-      if (!ch.so_what) {
-        // 支援兩種格式：{positive: 50.6} 或 [{sentiment:'正面', ratio:0.5}]
-        let posRatio;
-        if (typeof sentimentRaw.positive === 'number') {
-          posRatio = sentimentRaw.positive;
-        } else if (Array.isArray(sentimentRaw)) {
-          const pos = sentimentRaw.find(s => s.sentiment === '正面' || s.sentiment === 'positive');
-          posRatio = pos?.ratio ? pos.ratio * 100 : null;
-        }
-        ch.so_what = posRatio != null
-          ? `正面情緒佔 ${posRatio.toFixed(1)}%，品牌形象維護良好。需持續關注負面聲量（${(sentimentRaw.negative || 0).toFixed(1)}%）的來源和趨勢。`
-          : '整體好感度表現穩定，正面情緒佔多數。';
-        warnings.push(`enriched sentiment.so_what`);
+      let posRatio;
+      if (typeof sentimentRaw.positive === 'number') posRatio = sentimentRaw.positive;
+      else if (Array.isArray(sentimentRaw)) {
+        const pos = sentimentRaw.find(s => s.sentiment === '正面' || s.sentiment === 'positive');
+        posRatio = pos?.ratio ? pos.ratio * 100 : null;
       }
-      if (!ch.action_link) {
-        ch.action_link = '建議定期監控負面聲量來源，針對高頻負面議題制定回應策略。';
-        warnings.push(`enriched sentiment.action_link`);
-      }
+      const vars = {
+        brand,
+        positive_pct: posRatio != null ? posRatio.toFixed(1) : null,
+        negative_pct: (sentimentRaw.negative || 0).toFixed(1),
+      };
+      warnings.push(..._applyChapterTemplate(ch, 'sentiment', vars, snap));
       break;
     }
 
     case 'platform': {
       const platformRaw = data.pages?.platform?.data || {};
       const platformItems = platformRaw.items || (Array.isArray(platformRaw) ? platformRaw : []);
-      if (!ch.so_what && platformItems.length > 0) {
-        const top = platformItems[0];
-        ch.so_what = top
-          ? `${top.name || top.platform} 是 ${brand} 社群討論的主要場域（影響力 ${fmt(top.influence)}），建議優先經營此平台。`
-          : '平台分布均勻，無明顯集中趨勢。';
-        warnings.push(`enriched platform.so_what`);
-      }
-      if (!ch.action_link) {
-        ch.action_link = '建議根據各平台特性差異化內容策略：Instagram 重視覺、Facebook 重互動、YouTube 重深度。';
-        warnings.push(`enriched platform.action_link`);
-      }
+      const top = platformItems[0];
+      const vars = {
+        brand,
+        top_platform: top ? (top.name || top.platform) : null,
+        top_platform_influence: top ? fmt(top.influence) : null,
+      };
+      warnings.push(..._applyChapterTemplate(ch, 'platform', vars, snap));
       break;
     }
 
     case 'kol': {
       const kolRaw = data.pages?.kol?.data || {};
       const kolItems = kolRaw.items || (Array.isArray(kolRaw) ? kolRaw : []);
-      if (!ch.so_what && kolItems.length > 0) {
+      let vars = { brand };
+      if (kolItems.length > 0) {
         const top3 = kolItems.slice(0, 3);
         const top3Influence = top3.reduce((a, b) => a + (b.influence || 0), 0);
         const totalInfluence = kolItems.reduce((a, b) => a + (b.influence || 0), 0);
-        const ratio = totalInfluence > 0 ? (top3Influence / totalInfluence * 100).toFixed(0) : 'N/A';
-        ch.so_what = `前 3 大 KOL 佔總 KOL 影響力的 ${ratio}%，頭部集中效應明顯。與頭部 KOL 的合作關係是品牌聲量的關鍵支柱。`;
-        warnings.push(`enriched kol.so_what`);
+        const ratio = totalInfluence > 0 ? (top3Influence / totalInfluence * 100).toFixed(0) : null;
+        vars.top3_ratio = ratio;
       }
-      if (!ch.action_link) {
-        ch.action_link = '建議與前 3 大 KOL 建立長期合作關係，同時發展中腰部 KOL 降低風險集中度。';
-        warnings.push(`enriched kol.action_link`);
-      }
+      warnings.push(..._applyChapterTemplate(ch, 'kol', vars, snap));
       break;
     }
 
     case 'search_intent': {
-      if (!ch.so_what) {
-        ch.so_what = `搜尋數據顯示消費者對 ${brand} 有明確的購物和資訊搜尋需求，長尾字反映出具體的產品偏好。`;
-        warnings.push(`enriched search_intent.so_what`);
-      }
-      if (!ch.action_link) {
-        ch.action_link = '建議針對高搜量的購物意圖關鍵字優化搜尋引擎內容和到站頁面。';
-        warnings.push(`enriched search_intent.action_link`);
-      }
+      warnings.push(..._applyChapterTemplate(ch, 'search_intent', { brand }, snap));
       break;
     }
 
     case 'competitor_comparison': {
-      if (!ch.so_what && so.influence && comp.influence) {
-        const multiplier = (so.influence / comp.influence).toFixed(1);
-        ch.so_what = `${brand} 影響力為 ${competitor} 的 ${multiplier} 倍，在社群能見度上保持領先。但需持續監控競品動態，防止差距縮小。`;
-        warnings.push(`enriched competitor_comparison.so_what`);
-      }
-      if (!ch.action_link) {
-        ch.action_link = `建議每月追蹤 ${brand} vs ${competitor} 的影響力倍數變化，作為品牌健康度 KPI。`;
-        warnings.push(`enriched competitor_comparison.action_link`);
-      }
+      const multiplier = so.influence && comp.influence ? (so.influence / comp.influence).toFixed(1) : null;
+      const vars = { brand, competitor, so_vs_comp_multiplier: multiplier };
+      warnings.push(..._applyChapterTemplate(ch, 'competitor_comparison', vars, snap));
       break;
     }
 
     case 'news_events': {
-      if (!ch.so_what) {
-        ch.so_what = '新聞事件與社群聲量波動有對應關係，可作為趨勢歸因的重要參考。重大事件應標註在趨勢圖上。';
-        warnings.push(`enriched news_events.so_what`);
-      }
-      if (!ch.action_link) {
-        ch.action_link = '建議建立新聞事件監測機制，在重大事件發生時快速調整社群內容策略。';
-        warnings.push(`enriched news_events.action_link`);
-      }
+      warnings.push(..._applyChapterTemplate(ch, 'news_events', { brand }, snap));
       break;
     }
 
     case 'swot': {
-      if (!ch.so_what) {
-        ch.so_what = `綜合 SWOT 分析，${brand} 在場域具有社群主導力優勢，應把握搜尋意圖強的機會期，同時注意淡季波動和競品威脅。`;
-        warnings.push(`enriched swot.so_what`);
-      }
+      warnings.push(..._applyChapterTemplate(ch, 'swot', { brand }, snap));
       break;
     }
 
     case 'actions': {
-      if (!ch.so_what) {
-        ch.so_what = '以上建議根據數據分析結果提出，按優先級排序，聚焦在時機把握、KOL 合作、搜尋優化三大方向。';
-        warnings.push(`enriched actions.so_what`);
-      }
+      warnings.push(..._applyChapterTemplate(ch, 'actions', { brand }, snap));
       break;
     }
   }
@@ -215,16 +226,18 @@ function enrichChapter(ch, { data, analysis, interview } = {}) {
 function enrichKeyAngles(n, interview) {
   if (!interview?.key_angles || !Array.isArray(n.chapters)) return [];
   const warnings = [];
+  const snap = _getSnap();
+  const { interp } = require('../template-engine');
+  const tpl = snap?.get?.('copy.top_level.key_angle_injection') ?? '本報告特別關注「${angle}」，從數據中觀察此面向的表現與趨勢。';
   const allText = n.chapters.map(ch =>
     (ch.paragraphs || []).join(' ') + ' ' + (ch.insight || '') + ' ' + (ch.so_what || '')
   ).join(' ');
 
   for (const angle of interview.key_angles) {
     if (!allText.includes(angle)) {
-      // 找最相關的章節補進去
       const target = n.chapters.find(ch => ch.id === 'social_overview') || n.chapters[0];
       if (target && target.paragraphs) {
-        target.paragraphs.push(`本報告特別關注「${angle}」，從數據中觀察此面向的表現與趨勢。`);
+        target.paragraphs.push(interp(tpl, { angle }));
         warnings.push(`key_angle "${angle}" injected into chapter ${target.id}`);
       }
     }
@@ -243,17 +256,28 @@ function enrichDataReferences(n, data) {
   const brand = data.meta?.brand || '';
   const allText = n.chapters?.map(ch => (ch.paragraphs || []).join(' ')).join(' ') || '';
 
-  // 檢查影響力數字是否被引用
+  const snap = _getSnap();
+  const { interp } = require('../template-engine');
+  const refTpl = snap?.get?.('copy.top_level.data_reference_injection')
+    ?? '${brand} 在過去期間累計影響力指數達 ${influence_str}，發文數 ${posts_str} 篇，來自 ${authors_str} 位作者、${channels_str} 個頻道。總互動數（讚+留言+分享）達 ${total_engagement_str}。';
+  const sentTpl = snap?.get?.('copy.top_level.sentiment_injection') ?? '正面情緒佔比 ${positive_pct}。';
+
   const influenceStr = fmt(so.influence);
   if (!allText.includes(influenceStr) && !allText.includes(String(so.influence))) {
     const target = n.chapters?.find(ch => ch.id === 'social_overview');
     if (target && target.paragraphs) {
-      target.paragraphs[0] = `${brand} 在過去期間累計影響力指數達 ${influenceStr}，發文數 ${fmt(so.posts)} 篇，來自 ${fmt(so.authors)} 位作者、${fmt(so.channels)} 個頻道。總互動數（讚+留言+分享）達 ${fmt(so.likes + so.comments + so.shares)}。` + target.paragraphs[0];
+      target.paragraphs[0] = interp(refTpl, {
+        brand,
+        influence_str: influenceStr,
+        posts_str: fmt(so.posts),
+        authors_str: fmt(so.authors),
+        channels_str: fmt(so.channels),
+        total_engagement_str: fmt((so.likes || 0) + (so.comments || 0) + (so.shares || 0)),
+      }) + target.paragraphs[0];
       warnings.push(`injected influence ${influenceStr} into social_overview paragraphs`);
     }
   }
 
-  // 檢查好感度數字（支援 {positive: 50.6} 和 [{sentiment:'正面', ratio:0.5}] 兩種格式）
   const sentimentData = data.pages?.sentiment?.data;
   let positivePct;
   if (sentimentData && typeof sentimentData.positive === 'number') {
@@ -265,7 +289,7 @@ function enrichDataReferences(n, data) {
   if (positivePct && !allText.includes(positivePct)) {
     const target = n.chapters?.find(ch => ch.id === 'sentiment');
     if (target && target.paragraphs) {
-      target.paragraphs[0] = `正面情緒佔比 ${positivePct}。` + target.paragraphs[0];
+      target.paragraphs[0] = interp(sentTpl, { positive_pct: positivePct }) + target.paragraphs[0];
       warnings.push(`injected sentiment ${positivePct} into sentiment paragraphs`);
     }
   }
@@ -294,7 +318,10 @@ function normalize(raw, { data, analysis, interview, profile } = {}) {
 
   // title
   if (!n.title && n.meta?.brand) {
-    n.title = `${n.meta.brand} 品牌社群深度分析報告`;
+    const snap = _getSnap();
+    const { interp } = require('../template-engine');
+    const titleTpl = snap?.get?.('copy.top_level.title_template') ?? '${brand} 品牌社群深度分析報告';
+    n.title = interp(titleTpl, { brand: n.meta.brand });
     warnings.push('auto-generated title from meta.brand');
   }
 
@@ -375,14 +402,17 @@ function normalize(raw, { data, analysis, interview, profile } = {}) {
 
     const actIdx = n.chapters.findIndex(ch => ch.id === 'actions');
     if (actIdx !== -1 && n.chapters[actIdx].recommendations && !n.recommendations) {
+      const snap = _getSnap();
+      const priorities = snap?.get?.('copy.top_level.recommendation_priorities') ?? ['立即', '短期'];
+      const fb = snap?.get?.('copy.top_level.recommendation_fallback') ?? { who: '行銷團隊', immediate_when: '本月', short_when: '本季', kpi: '待定義' };
       n.recommendations = n.chapters[actIdx].recommendations.map((r, i) => {
         if (typeof r === 'string') {
           return {
-            priority: i < 2 ? '立即' : '短期',
-            who: '行銷團隊',
+            priority: i < 2 ? priorities[0] : priorities[1],
+            who: fb.who,
             what: r,
-            when: i < 2 ? '本月' : '本季',
-            kpi: '待定義'
+            when: i < 2 ? fb.immediate_when : fb.short_when,
+            kpi: fb.kpi
           };
         }
         return r;

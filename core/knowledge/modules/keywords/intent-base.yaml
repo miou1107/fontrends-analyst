@@ -1,0 +1,30 @@
+# 留言意圖分類關鍵字（對齊 intent-classifier.js:5-11）
+
+_meta:
+  name: intent-base
+  description: 留言回饋系統的意圖分類關鍵字
+  extends: null
+
+intents:
+  delete:
+    label: 刪除
+    keywords: [刪掉, 刪除, 移除, 拿掉, remove, delete]
+
+  structure:
+    label: 結構調整
+    keywords: [移到, 搬到, 加一頁, 新增頁, 調換, 順序, move, reorder]
+
+  content:
+    label: 內容修改
+    keywords: [錯了, 改成, 應該是, 換成, 更新, 修改, wrong, change, update]
+
+  style:
+    label: 樣式調整
+    keywords: [字型, 字體, 顏色, 大小, 粗體, 間距, pt, font, color, bold, size]
+
+  question:
+    label: 詢問
+    keywords: ["？", "?", 為什麼, 哪裡來, 是不是, why, how, what]
+
+patterns:
+  cjk_character: "[\u4e00-\u9fff\u3400-\u4dbf]"

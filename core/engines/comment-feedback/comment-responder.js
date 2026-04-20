@@ -33,7 +33,14 @@ async function replyToComment(auth, fileId, commentId, content) {
   });
 }
 
-async function resolveComment(auth, fileId, commentId) {
+async function resolveComment(auth, fileId, commentId, opts = {}) {
+  // 🔥 鐵律 B：AI 不得自動標記已解決，必須 user 明確同意才 resolve。
+  if (!opts.userConsent) {
+    throw new Error(
+      '[comment-responder] resolveComment 需 userConsent:true，' +
+      'AI 不得自動標已解決（鐵律 B）。user 驗收後由他們自己手動 resolve。'
+    );
+  }
   const { google } = require('googleapis');
   const drive = google.drive({ version: 'v3', auth });
   await drive.comments.update({
@@ -44,9 +51,16 @@ async function resolveComment(auth, fileId, commentId) {
   });
 }
 
-async function replyAndResolve(auth, fileId, commentId, replyContent) {
+async function replyAndResolve(auth, fileId, commentId, replyContent, opts = {}) {
+  // 🔥 鐵律 B：預設不可呼叫此函式。必須 user 明確同意。
+  if (!opts.userConsent) {
+    throw new Error(
+      '[comment-responder] replyAndResolve 需 userConsent:true（鐵律 B）。' +
+      '預設請只用 replyToComment，由 user 自己標已解決。'
+    );
+  }
   await replyToComment(auth, fileId, commentId, replyContent);
-  await resolveComment(auth, fileId, commentId);
+  await resolveComment(auth, fileId, commentId, opts);
 }
 
 function detectLanguage(text) {

@@ -1,0 +1,24 @@
+_meta:
+  name: competitive-7d
+  description: 競品對比專用，強化 SOV / competitor 權重
+
+use_canonical: true
+
+selected:
+  core:
+    - share_of_voice
+    - competitor
+    - engagement
+    - reach
+    - sentiment
+    - content
+    - audience
+
+weights:
+  share_of_voice: 1.5    # 競品分析 SOV 加權
+  competitor: 1.5
+  engagement: 1.0
+  reach: 1.0
+  sentiment: 1.0
+  content: 0.8
+  audience: 0.5

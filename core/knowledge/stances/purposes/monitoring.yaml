@@ -1,0 +1,8 @@
+_meta:
+  name: monitoring
+  description: 定期監控（週報 / 月報 / 危機預警）
+
+must_include_sections: [trend, anomalies, alerts]
+emphasize: [change, outliers, threshold_breaches]
+deemphasize: [long_form_analysis]
+alert_on: [negative_anomalies, brand_health_decline, competitor_surge]

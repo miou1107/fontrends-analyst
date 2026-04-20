@@ -182,7 +182,7 @@ describe('runAudit', () => {
     expect(result.score).toBeGreaterThan(0);
     expect(result.score).toBeLessThanOrEqual(100);
     expect(result.summary).toBeDefined();
-    expect(result.summary.length).toBe(6); // 6 audit dimensions
+    expect(result.summary.length).toBe(7); // 7 audit dimensions (新增學習規則)
     fs.rmSync(tmpDir, { recursive: true });
   });
 

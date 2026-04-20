@@ -1,0 +1,26 @@
+# 保底預設值 — 所有 key 的最底層 fallback
+# Resolver 順序：_defaults → stance → modules → profile.overrides → learned → CLI
+# 任一 key 未在上層指定時，此處的值被使用
+
+_meta:
+  description: 最底層保底，保證 loader 永不 throw "missing key"（只會 throw "invalid value"）
+
+# 指向 modules/thresholds/standard.yaml 的值
+thresholds_default_module: standard
+
+# Cache / TTL 設定
+cache:
+  url_snapshot_ttl_days: 7
+  llm_response_ttl_days: 30
+
+# 敏感資訊遮罩規則（logger）
+logging:
+  mask_patterns:
+    - "(?i)[\\w.%+-]+@[\\w.-]+\\.[A-Za-z]{2,}"        # email
+    - "(?i)(api[_-]?key|token|secret|password)[\"'\\s:=]+[\\w.-]+"
+    - "(?i)bearer\\s+[\\w.-]+"
+
+# Run lifecycle
+run:
+  archive_non_final_after_days: 30
+  keep_final_indefinitely: true

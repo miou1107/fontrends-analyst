@@ -1,0 +1,22 @@
+# 🔒 鎖定：統計慣例值
+# 這些是數學公式本身，改了 = 算錯結果。
+# 除非你在做統計研究且知道後果，否則不要動這些值。
+# Loader 會對此檔案打上 locked: true 標記，任何 override 需顯式 `--unlock-stats` flag。
+
+_meta:
+  locked: true
+  rationale: |
+    這些不是業務門檻，是統計學約定俗成的常數。
+    改動會導致異常偵測、相關性分析、離群值判斷出錯。
+
+# IQR（四分位距）離群值圍籬倍數 — Tukey 1977 原始定義
+iqr:
+  fence_multiplier: 1.5  # upper = Q3 + 1.5*IQR, lower = Q1 - 1.5*IQR
+
+# Pearson 相關係數最低樣本數 — 低於此數 r 值無統計意義
+correlation:
+  pearson_min_data_points: 5
+
+# 異常偵測最低樣本數 — 低於此數無法算 std
+anomaly:
+  min_data_points: 3

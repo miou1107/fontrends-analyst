@@ -136,21 +136,25 @@ const DEFAULT_RULES_PATH = path.resolve(__dirname, '../../learned/learned-rules.
  * 從 corrections 中提取可自動套用的規則
  * 只有重複 3+ 次的模式才會產出規則（避免過度反應）
  */
-function generateRules(corrections) {
+function generateRules(corrections, snapshot) {
+  const textReplaceMin = snapshot?.get?.('thresholds.learning.text_replace_min_count') ?? 2;
+  const categoryMin = snapshot?.get?.('thresholds.learning.category_pattern_min_count') ?? 2;
+  const auditMin = snapshot?.get?.('thresholds.learning.audit_rule_min_count') ?? 3;
+  const styleMin = snapshot?.get?.('thresholds.learning.style_rule_min_count') ?? 3;
+  const confDivisor = snapshot?.get?.('thresholds.learning.confidence_divisor') ?? 5;
+
   const rules = {
     generated_at: new Date().toISOString(),
     total_corrections: corrections.length,
-    narrative_rules: [],   // narrative-normalizer 套用
-    audit_rules: [],       // audit-engine 套用
-    renderer_rules: [],    // renderer 套用
+    narrative_rules: [],
+    audit_rules: [],
+    renderer_rules: [],
   };
 
   if (corrections.length === 0) return rules;
 
-  const { bySource, byType } = groupCorrections(corrections);
+  const { byType } = groupCorrections(corrections);
 
-  // ── narrative 修正規則 ──
-  // 從 content/format 類型的 corrections 中提取文字替換規則
   const contentCorrections = (byType.content || []).concat(byType.format || []);
   const replaceMap = {};
   for (const c of contentCorrections) {
@@ -161,18 +165,17 @@ function generateRules(corrections) {
     }
   }
   for (const r of Object.values(replaceMap)) {
-    if (r.count >= 2) {  // 文字替換 2 次就算穩定
+    if (r.count >= textReplaceMin) {
       rules.narrative_rules.push({
         type: 'text_replace',
         old_value: r.old,
         new_value: r.new,
-        confidence: Math.min(r.count / 5, 1),
+        confidence: Math.min(r.count / confDivisor, 1),
         source: r.source,
       });
     }
   }
 
-  // ── 從 learning-capture 的 V2 格式提取規則 ──
   const v2Entries = corrections.filter(c => c.schemaVersion === 2 && c.approved);
   const categoryRules = {};
   for (const c of v2Entries) {
@@ -185,19 +188,17 @@ function generateRules(corrections) {
     });
   }
   for (const [cat, items] of Object.entries(categoryRules)) {
-    if (items.length >= 2) {
+    if (items.length >= categoryMin) {
       rules.narrative_rules.push({
         type: 'category_pattern',
         category: cat,
         examples: items.slice(0, 5),
         count: items.length,
-        confidence: Math.min(items.length / 5, 1),
+        confidence: Math.min(items.length / confDivisor, 1),
       });
     }
   }
 
-  // ── audit 新增檢查規則 ──
-  // 重複出現的 value 類型錯誤 → 新增 audit 檢查
   const valueErrors = byType.value || [];
   const fieldErrors = {};
   for (const c of valueErrors) {
@@ -206,7 +207,7 @@ function generateRules(corrections) {
     fieldErrors[field]++;
   }
   for (const [field, count] of Object.entries(fieldErrors)) {
-    if (count >= 3) {
+    if (count >= auditMin) {
       rules.audit_rules.push({
         type: 'value_check',
         field,
@@ -216,7 +217,6 @@ function generateRules(corrections) {
     }
   }
 
-  // ── renderer 樣式修正規則 ──
   const styleCorrections = byType.style || [];
   const stylePatterns = {};
   for (const c of styleCorrections) {
@@ -226,7 +226,7 @@ function generateRules(corrections) {
     if (c.new_value) stylePatterns[key].lastValue = c.new_value;
   }
   for (const [prop, info] of Object.entries(stylePatterns)) {
-    if (info.count >= 3) {
+    if (info.count >= styleMin) {
       rules.renderer_rules.push({
         type: 'style_override',
         property: prop,

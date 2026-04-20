@@ -1,0 +1,20 @@
+_meta:
+  name: deep
+  description: 深度 — 給 analyst / 內部複盤（15 洞察 / 10-20 建議 / 完整附錄 + 方法論）
+  extends: standard
+
+_overrides:
+  thresholds.scoring.max_insights: 15
+  thresholds.scoring.recommendations.min_total: 10
+  thresholds.scoring.recommendations.max_total: 20
+
+output:
+  text_lines_per_slide: 12
+  charts_per_slide: 3
+  max_rows_per_table: 30
+  include_appendix: true
+  include_methodology: true
+  include_data_sources: true
+  executive_summary_target_length: 600
+  chapter_paragraph_min: 3
+  chapter_paragraph_max: 8

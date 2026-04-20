@@ -1,0 +1,73 @@
+# Script-planner 頁面定義（對齊 script-planner.js:8-39）
+# page_id → dim_id / title / primary_metric / weights / fixed_pages
+
+_meta:
+  name: script-pages
+  description: 報告腳本頁面的靜態對應定義
+
+# page_id → dim_id（analysis 維度對應）
+page_to_dim:
+  kpi: social_overview
+  trend: trend
+  language: language
+  platform: platform
+  kol: kol
+  sentiment: sentiment
+  venue: search
+  competitor: competitor
+
+# page_id → 中文標題
+page_titles:
+  kpi: 品牌社群影響力
+  trend: 聲量趨勢
+  language: 語系分布
+  platform: 平台效率
+  kol: KOL 生態
+  sentiment: 好感度
+  venue: 搜尋聲量與場域
+  competitor: 競爭態勢
+
+# page_id → 主力指標
+primary_metrics:
+  kpi: influence
+  trend: influence
+  language: language_diversity_index
+  platform: platform_efficiency
+  kol: kol_coverage
+  sentiment: net_sentiment_score
+  venue: search_volume_index
+  competitor: market_share_estimate
+
+# 各 schema 的基礎權重（決定哪些 page 會出現、相對重要性）
+base_weights_by_schema:
+  full-13:
+    kpi: 0.9
+    trend: 0.8
+    language: 0.5
+    platform: 0.7
+    kol: 0.8
+    sentiment: 0.6
+    venue: 0.4
+    competitor: 0.7
+  compact-8:
+    kpi: 0.9
+    trend: 0.8
+    platform: 0.7
+    sentiment: 0.6
+  executive-5:
+    kpi: 0.9
+  mini-3: {}
+
+# 各 schema 的固定頁面（無論 weight 多少都會出現）
+fixed_pages_by_schema:
+  full-13: [cover, summary, actions, closing]
+  compact-8: [cover, summary, actions, closing]
+  executive-5: [cover, summary, actions, closing]
+  mini-3: [cover, overview, actions_closing]
+
+# Severity 處理順序（越小越優先）
+severity_order:
+  negative: 0
+  warning: 1
+  positive: 2
+  neutral: 3

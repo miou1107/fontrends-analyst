@@ -3,34 +3,34 @@
 const { getAffinityWeights } = require('./affinity-table');
 const { computeSignalStrength } = require('./signal-scorer');
 const { generateHook } = require('./hook-generator');
+const { resolveProfile } = require('../../knowledge-loader');
 
-const PURPOSE_LABELS = {
-  'sell-venue': '推銷場地給品牌',
-  'brand-review': '品牌回顧報告',
-  'market-entry': '新市場評估',
-  'kol-strategy': 'KOL 合作策略',
-  'crisis-response': '危機應對',
-};
+const DEFAULT_PROFILE = 'brand-social';
 
 async function bindPurpose(analysis, interview, brand, options = {}) {
+  const snapshot = options.snapshot || resolveProfile(options.profile || DEFAULT_PROFILE);
+  const purposeLabels = snapshot.get('dimensions.purpose_labels');
+  const neutralDefault = snapshot.get('dimensions.affinity_neutral_default');
+  const quarterMap = snapshot.get('time_windows.quarter_mapping');
+
   const purpose = options.purposeOverride || interview?.purpose;
   if (!purpose) return null;
 
   const venueName = interview?.venue?.name || '';
   const brandName = brand?.name || 'Unknown';
-  const affinityWeights = getAffinityWeights(purpose);
+  const affinityWeights = getAffinityWeights(purpose, snapshot);
   const dimensions = analysis?.dimensions || {};
 
   const bindings = [];
 
   for (const dimId of Object.keys(dimensions)) {
     const dim = dimensions[dimId];
-    const affinity = affinityWeights[dimId] ?? 0.5;
-    const signalStrength = computeSignalStrength(dim);
+    const affinity = affinityWeights[dimId] ?? neutralDefault;
+    const signalStrength = computeSignalStrength(dim, snapshot);
     const relevanceScore = parseFloat((affinity * signalStrength).toFixed(2));
 
     const insightType = detectPrimaryInsightType(dim);
-    const season = inferSeason(analysis.meta?.date_range);
+    const season = inferSeason(analysis.meta?.date_range, quarterMap);
     const context = {
       brand: brandName,
       venue: venueName,
@@ -40,7 +40,7 @@ async function bindPurpose(analysis, interview, brand, options = {}) {
       season,
     };
 
-    const hook = await generateHook(purpose, dimId, context, options);
+    const hook = await generateHook(purpose, dimId, context, { ...options, snapshot });
 
     bindings.push({
       dimension: dimId,
@@ -55,7 +55,7 @@ async function bindPurpose(analysis, interview, brand, options = {}) {
   return {
     meta: {
       purpose,
-      purpose_label: PURPOSE_LABELS[purpose] || purpose,
+      purpose_label: purposeLabels[purpose] || purpose,
       venue: venueName,
       brand: brandName,
       generated_at: new Date().toISOString(),
@@ -74,15 +74,16 @@ function detectPrimaryInsightType(dim) {
   return 'unknown';
 }
 
-function inferSeason(dateRange) {
+function inferSeason(dateRange, quarterMap) {
   if (!dateRange) return null;
   const end = dateRange.end || dateRange.to;
   if (!end) return null;
   const month = new Date(end).getMonth() + 1;
-  if (month >= 1 && month <= 3) return 'Q1';
-  if (month >= 4 && month <= 6) return 'Q2';
-  if (month >= 7 && month <= 9) return 'Q3';
-  return 'Q4';
+  const map = quarterMap || { Q1: [1,2,3], Q2: [4,5,6], Q3: [7,8,9], Q4: [10,11,12] };
+  for (const [q, months] of Object.entries(map)) {
+    if (months.includes(month)) return q;
+  }
+  return null;
 }
 
 // CLI

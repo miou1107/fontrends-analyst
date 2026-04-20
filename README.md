@@ -38,6 +38,19 @@ The skill will guide you through the full analysis workflow.
 ## Updates
 
 Core knowledge base updates automatically every time the skill runs.
+
+## Architecture（SoC 六層 — 規劃中）
+
+2026-04-20 開始依 Separation of Concerns 重構：code 只做 pipeline / 框架，所有會變動的知識參數化。詳見 [openspec/specs/knowledge-layer/spec.md](openspec/specs/knowledge-layer/spec.md) 與 [實作 plan](openspec/plans/2026-04-20-knowledge-layer-extraction.md)。
+
+- **L4 Presentation** — 報告 / UI
+- **L3 Engines**（工程師）— 純演算法，不碰業務詞彙
+- **L2.5 Run Context** — 每次 run 的外部素材（`runs/<id>/context/`）
+- **L2 Knowledge**（User）— `core/knowledge/{stances,modules,profiles}/*.yaml`
+- **L1 Learned**（系統自動）— `core/learned/learned-rules.json`
+- **L0 Run Inputs** — 被分析的主體數據
+
+每次執行 = 一個完整版本（`runs/<id>/{inputs,context,temp,outputs,logs}/`），支援 rerun / lineage / is_final / archive。
 Skill itself updates via `git pull` in this repo.
 
 ## Self-Learning（2026-04-08 升級）

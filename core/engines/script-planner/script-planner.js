@@ -4,49 +4,24 @@ const { computeSignalScore } = require('./scorers/signal-scorer');
 const { getIntentBoost, getPurposeFactor } = require('./scorers/intent-scorer');
 const { assignBlocks } = require('./block-assigner');
 const { generateHeadline } = require('./headline-generator');
+const { resolveProfile } = require('../../knowledge-loader');
 
-const PAGE_TO_DIM = {
-  kpi: 'social_overview', trend: 'trend', language: 'language',
-  platform: 'platform', kol: 'kol', sentiment: 'sentiment',
-  venue: 'search', competitor: 'competitor',
-};
-
-const PAGE_TITLES = {
-  kpi: '品牌社群影響力', trend: '聲量趨勢', language: '語系分布',
-  platform: '平台效率', kol: 'KOL 生態', sentiment: '好感度',
-  venue: '搜尋聲量與場域', competitor: '競爭態勢',
-};
-
-const PRIMARY_METRICS = {
-  kpi: 'influence', trend: 'influence', language: 'language_diversity_index',
-  platform: 'platform_efficiency', kol: 'kol_coverage',
-  sentiment: 'net_sentiment_score', venue: 'search_volume_index',
-  competitor: 'market_share_estimate',
-};
-
-const BASE_WEIGHTS = {
-  'full-13':     { kpi: 0.9, trend: 0.8, language: 0.5, platform: 0.7, kol: 0.8, sentiment: 0.6, venue: 0.4, competitor: 0.7 },
-  'compact-8':   { kpi: 0.9, trend: 0.8, platform: 0.7, sentiment: 0.6 },
-  'executive-5': { kpi: 0.9 },
-  'mini-3':      {},
-};
-
-const FIXED_PAGES = {
-  'full-13':     ['cover', 'summary', 'actions', 'closing'],
-  'compact-8':   ['cover', 'summary', 'actions', 'closing'],
-  'executive-5': ['cover', 'summary', 'actions', 'closing'],
-  'mini-3':      ['cover', 'overview', 'actions_closing'],
-};
-
-const SEVERITY_ORDER = { negative: 0, warning: 1, positive: 2, neutral: 3 };
-
-const EXCLUDE_THRESHOLD = 0.1;
-const INSUFFICIENT_EPSILON = 0.01;
-const DATA_PRESENCE_BONUS = 0.35;
+const DEFAULT_PROFILE = 'brand-social';
 
 function planScript(analysis, brand, schemaName, options = {}) {
-  const weights = BASE_WEIGHTS[schemaName] || {};
-  const fixedPages = FIXED_PAGES[schemaName] || [];
+  const snapshot = options.snapshot || resolveProfile(options.profile || DEFAULT_PROFILE);
+  const pageToDim = snapshot.get('dimensions.page_to_dim');
+  const pageTitles = snapshot.get('dimensions.page_titles');
+  const primaryMetrics = snapshot.get('dimensions.primary_metrics');
+  const baseWeightsBySchema = snapshot.get('dimensions.base_weights_by_schema');
+  const fixedPagesBySchema = snapshot.get('dimensions.fixed_pages_by_schema');
+  const severityOrder = snapshot.get('dimensions.severity_order');
+  const excludeThreshold = snapshot.get('thresholds.scoring.exclude_threshold');
+  const insufficientEpsilon = snapshot.get('thresholds.scoring.insufficient_epsilon');
+  const dataPresenceBonus = snapshot.get('thresholds.scoring.data_presence_bonus');
+
+  const weights = baseWeightsBySchema[schemaName] || {};
+  const fixedPages = fixedPagesBySchema[schemaName] || [];
   const dimensions = analysis.dimensions || {};
   const recommendations = analysis.recommendations || [];
 
@@ -54,7 +29,7 @@ function planScript(analysis, brand, schemaName, options = {}) {
   const excluded = [];
 
   for (const [pageId, baseWeight] of Object.entries(weights)) {
-    const dimId = PAGE_TO_DIM[pageId];
+    const dimId = pageToDim[pageId];
     const dim = dimId ? dimensions[dimId] : null;
 
     if (!dim) {
@@ -62,27 +37,27 @@ function planScript(analysis, brand, schemaName, options = {}) {
       continue;
     }
 
-    const rawSignal = computeSignalScore(dim);
+    const rawSignal = computeSignalScore(dim, snapshot);
     const hasData = dim.derived_metrics && Object.keys(dim.derived_metrics).length > 0;
-    const signalScore = hasData ? Math.min(rawSignal + DATA_PRESENCE_BONUS, 1.0) : rawSignal;
-    const intentBoost = getIntentBoost(dimId, brand);
-    const purposeFactor = getPurposeFactor(dimId, options.purposeBindings);
+    const signalScore = hasData ? Math.min(rawSignal + dataPresenceBonus, 1.0) : rawSignal;
+    const intentBoost = getIntentBoost(dimId, brand, snapshot);
+    const purposeFactor = getPurposeFactor(dimId, options.purposeBindings, snapshot);
     const score = parseFloat((baseWeight * signalScore * intentBoost * purposeFactor).toFixed(4));
 
-    if (score < EXCLUDE_THRESHOLD) {
-      const reason = signalScore < INSUFFICIENT_EPSILON ? 'insufficient_data' : 'low_relevance';
+    if (score < excludeThreshold) {
+      const reason = signalScore < insufficientEpsilon ? 'insufficient_data' : 'low_relevance';
       excluded.push({ pageId, score, reason });
       continue;
     }
 
-    const { blocks, excluded_blocks } = assignBlocks(dim, dimId, recommendations);
-    const title = PAGE_TITLES[pageId] || pageId;
+    const { blocks, excluded_blocks } = assignBlocks(dim, dimId, recommendations, snapshot);
+    const title = pageTitles[pageId] || pageId;
     const { focus, headline } = generateHeadline(dim, title, {
       focus: dimId,
       bindings: options.purposeBindings,
-    });
+    }, snapshot);
 
-    const insightIndices = selectInsightIndices(dim.insights || []);
+    const insightIndices = selectInsightIndices(dim.insights || [], severityOrder);
     const anomalyIndices = (dim.anomalies || []).map((_, i) => i);
     const recommendationIndices = [];
     recommendations.forEach((rec, idx) => {
@@ -100,7 +75,7 @@ function planScript(analysis, brand, schemaName, options = {}) {
       blocks,
       excluded_blocks,
       data_refs: {
-        primary_metric: PRIMARY_METRICS[pageId] || 'influence',
+        primary_metric: primaryMetrics[pageId] || 'influence',
         insight_indices: insightIndices,
         anomaly_indices: anomalyIndices,
         recommendation_indices: recommendationIndices,
@@ -125,14 +100,13 @@ function planScript(analysis, brand, schemaName, options = {}) {
   };
 }
 
-function selectInsightIndices(insights) {
+function selectInsightIndices(insights, severityOrder) {
   if (insights.length === 0) return [];
-  const indexed = insights.map((ins, i) => ({ i, severity: SEVERITY_ORDER[ins.severity] ?? 99 }));
+  const indexed = insights.map((ins, i) => ({ i, severity: severityOrder[ins.severity] ?? 99 }));
   indexed.sort((a, b) => a.severity - b.severity);
   return indexed.slice(0, 3).map(x => x.i);
 }
 
-// CLI
 if (require.main === module) {
   const fs = require('fs');
   const path = require('path');

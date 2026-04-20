@@ -1,0 +1,18 @@
+# 變體：成長敏感 — 門檻低，早期品牌 / 小基數 / 要抓微訊號用
+# 只 override 與 standard 不同的 key，其他繼承 standard
+
+_meta:
+  name: growth-sensitive
+  description: 門檻較低的變體，適合早期品牌、小基數、或想抓微訊號的情境
+  extends: standard
+
+scoring:
+  growth_decline_detection: 5         # 5% 就算成長（standard 是 10%）
+  significant_change: 5
+  max_insights: 8                     # 多挑一點訊號
+
+anomaly:
+  zscore_threshold: 2.0               # 更容易觸發異常（standard 2.5）
+
+correlation:
+  strength_threshold: 0.5             # 放寬（standard 0.7）

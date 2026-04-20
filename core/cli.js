@@ -45,6 +45,8 @@ function parseArgs() {
       case '--auto': args.auto = true; break;
       case '--resume': args.resume = true; break;
       case '--skip-narrative': args.skipNarrative = true; break;
+      case '--profile': args.profile = argv[++i]; break;
+      case '--density': args.density = argv[++i]; break;
       case '--help': args.help = true; break;
     }
   }
@@ -66,17 +68,25 @@ function printHelp() {
   --period <range>    分析期間（如 "2025-03~2026-03"）
   --format <type>     報告格式: pptx, gslides, gdocs（預設: pptx）
   --schema <name>     報告模板: full-13, compact-8, mini-3（預設: full-13）
+  --profile <name>    知識 profile: brand-social, brand-social-for-ceo（預設: brand-social）
+  --density <name>    詳盡度: sparse（精簡給老闆）, standard, deep（分析師用）
   --auto              自動模式（跳過互動問答）
   --resume            從斷點續接
   --skip-narrative    跳過 §7 敘事包裝（需 AI 產出）
   --help              顯示說明
 
 範例：
-  # 自動跑現有 run（跳過訪談和敘事）
-  node cli.js --run ~/.fontrends/runs/dior-2026-03-24 --auto --skip-narrative
+  # 給 LV 老闆看的精簡版
+  node cli.js --brand louis-vuitton --density sparse --auto
 
-  # 全新互動式分析
-  node cli.js --brand Dior --competitor Chanel --period "2025-03~2026-03"
+  # Taipei 101 觀景台深度版分析
+  node cli.js --brand taipei-101 --density deep --auto
+
+  # Taipei FunPass 標準報告
+  node cli.js --brand taipei-funpass --density standard --auto
+
+  # 自動跑現有 run
+  node cli.js --run ~/.fontrends/runs/dior-2026-03-24 --auto --skip-narrative
 
   # 從斷點續接
   node cli.js --run ~/.fontrends/runs/dior-2026-03-24 --resume

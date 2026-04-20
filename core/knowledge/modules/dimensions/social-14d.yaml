@@ -1,0 +1,33 @@
+# 社群品牌分析選用的維度子集 + 權重
+# 引用 canonical 的 id，不重複定義名稱
+
+_meta:
+  name: social-14d
+  description: 品牌社群分析標準 14 維度（7 核心 + 7 進階）
+  extends: null
+
+use_canonical: true    # 強制走 canonical.yaml 的定義，不准自行命名
+
+selected:
+  core:                # 必做
+    - engagement
+    - reach
+    - sentiment
+    - share_of_voice
+    - content
+    - competitor
+    - audience
+  advanced:            # 選做
+    - total
+    # 其他進階維度（情緒細分、主題分群、危機訊號、傳播路徑、KOL、時段、裝置）
+    # 若需要可在此擴充並在 canonical.yaml 同步新增
+
+weights:               # 各維度在 signal-scorer 的相對權重
+  engagement: 1.0
+  reach: 1.0
+  sentiment: 1.0
+  share_of_voice: 1.0
+  content: 0.8
+  competitor: 0.8
+  audience: 0.6
+  total: 0.5

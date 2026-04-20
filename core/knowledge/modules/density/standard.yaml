@@ -1,0 +1,27 @@
+# 標準密度 — 平衡詳略（對齊現有行為）
+#
+# 兩段式：
+#   _overrides: 覆蓋其他 namespace（如 thresholds）的 key
+#   output:     density 專屬設定（給渲染層用）
+
+_meta:
+  name: standard
+  description: 標準詳盡度（5 洞察 / 6-12 建議 / 無附錄）
+
+# 覆蓋 thresholds 的相關設定
+_overrides:
+  thresholds.scoring.max_insights: 5
+  thresholds.scoring.recommendations.min_total: 6
+  thresholds.scoring.recommendations.max_total: 12
+
+# density.output.* — 給渲染層用的密度設定
+output:
+  text_lines_per_slide: 8
+  charts_per_slide: 2
+  max_rows_per_table: 10
+  include_appendix: false
+  include_methodology: false
+  include_data_sources: true
+  executive_summary_target_length: 300
+  chapter_paragraph_min: 2
+  chapter_paragraph_max: 5

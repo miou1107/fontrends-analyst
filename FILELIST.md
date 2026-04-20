@@ -16,10 +16,27 @@ fontrends-analyst/
 │   ├── tools/                     # 輔助工具（PPT QA 等）
 │   ├── docs/superpowers/          # 子模組 design plans + specs
 │   ├── learned/formats/           # 輸出格式規則（gdocs/gslides）
+│   ├── knowledge/                 # 🆕 L2 參數化知識層（yaml）
+│   │   ├── _defaults.yaml
+│   │   ├── stance-map.yaml
+│   │   ├── stances/{audiences,purposes,focuses}/  # 對象/目的/著重面向
+│   │   ├── modules/
+│   │   │   ├── thresholds/         # standard + _statistical-constants(🔒) + 2 變體
+│   │   │   ├── keywords/intent-base.yaml
+│   │   │   ├── copy/               # tone-professional + tone-executive-brief
+│   │   │   ├── time-windows/standard.yaml
+│   │   │   ├── dimensions/         # canonical(📌) + metric-labels + script-pages + purpose-affinity + 2 變體
+│   │   │   └── density/            # standard / sparse / deep
+│   │   └── profiles/               # brand-social / brand-social-for-ceo
+│   ├── knowledge-loader.js         # L2↔L3 唯一介面，產 frozen snapshot
+│   ├── template-engine.js          # Mini template engine (${var} + {{#if}})
+│   ├── tools/
+│   │   ├── check-soc-boundary.js   # SoC 守門檢查
+│   │   └── soc-boundary-baseline.json
 │   └── version.json               # 核心版本資訊
 ├── openspec/                      # OpenSpec 規格文件
-│   ├── specs/                     # 21 個模組規格
-│   └── plans/                     # 實作計劃
+│   ├── specs/                     # 22 個模組規格（新增 knowledge-layer）
+│   └── plans/                     # 實作計劃（新增 2026-04-20-knowledge-layer-extraction）
 ├── adapters/                      # 外部工具 adapter
 ├── runs -> ~/.fontrends/runs/     # Run 數據（symlink）
 ├── FILELIST.md                    # 本檔案

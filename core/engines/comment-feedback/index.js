@@ -9,10 +9,12 @@ const { buildDeleteRequests, buildStyleRequests, buildContentRequests, executeSl
 const { buildDocDeleteRequests, buildDocStyleRequests, buildDocContentRequests, sortRequestsDescending, executeDocsUpdate, getDocument } = require('./modifiers/docs-modifier');
 const { buildCorrectionEntry, appendCorrection, upsertFormatRule } = require('./learning-capture');
 const { shouldDryRun, formatDryRunReport, createSnapshot, wrapWithRetry } = require('./safety');
-const { getGoogleAuth } = require('../helpers');
+const { getGoogleAuth, getServiceAccountAuth } = require('../helpers');
+const { resolveProfile } = require('../../knowledge-loader');
 
 const CORRECTIONS_PATH = path.resolve(__dirname, '../../learned/corrections.jsonl');
 const FORMATS_DIR = path.resolve(__dirname, '../../learned/formats');
+const DEFAULT_PROFILE = 'brand-social';
 
 /**
  * Main entry point for the comment feedback pipeline.
@@ -23,17 +25,31 @@ const FORMATS_DIR = path.resolve(__dirname, '../../learned/formats');
  * @returns {object} { processed, failed, learnings }
  */
 async function processCommentFeedback(url, options = {}) {
+  // 0. Load knowledge snapshot (caller can pass profile via options.profile)
+  const snapshot = options.snapshot || resolveProfile(options.profile || DEFAULT_PROFILE);
+
   // 1. Parse URL
   const { fileId, fileType } = parseDocUrl(url);
 
   // 2. Auth
-  const SCOPE = 'https://www.googleapis.com/auth/drive';
-  const auth = await getGoogleAuth([
-    SCOPE,
+  // - userAuth (OAuth): 讀留言、修改文件內容（Vin 身份）
+  // - botAuth (Service Account): 回覆留言（顯示為 Journey101 AI Bot）
+  const scopes = [
+    'https://www.googleapis.com/auth/drive',
     fileType === 'slides'
       ? 'https://www.googleapis.com/auth/presentations'
       : 'https://www.googleapis.com/auth/documents',
-  ]);
+  ];
+  const auth = await getGoogleAuth(scopes);
+  let botAuth = null;
+  try {
+    botAuth = await getServiceAccountAuth(scopes);
+    console.log('🤖 SA bot auth loaded — 回覆將以 Journey101 AI Bot 身份發送');
+  } catch (e) {
+    console.log(`⚠️  SA 不可用（${e.message}）— 回覆將以 user 身份發送`);
+  }
+  // Helper: use bot for replies if available, user otherwise
+  const replyAuth = botAuth || auth;
 
   // 3. Fetch comments
   const comments = await fetchComments(auth, fileId, fileType);
@@ -44,7 +60,7 @@ async function processCommentFeedback(url, options = {}) {
   // 4. Classify intents (rule-based; in practice Claude acts as LLM)
   const classified = comments.map(c => ({
     ...c,
-    classified: classifyIntent(c.content, null),
+    classified: classifyIntent(c.content, null, snapshot),
   }));
 
   // 5. Group by target + resolve contradictions
@@ -61,7 +77,8 @@ async function processCommentFeedback(url, options = {}) {
 
   // 6. Sort by processing order (excluding overridden)
   const sorted = sortByProcessingOrder(
-    resolvedComments.filter(c => !overriddenIds.has(c.id))
+    resolvedComments.filter(c => !overriddenIds.has(c.id)),
+    snapshot
   );
 
   // Reply to overridden comments
@@ -69,7 +86,7 @@ async function processCommentFeedback(url, options = {}) {
     const c = resolvedComments.find(x => x.id === id);
     if (c) {
       try {
-        await replyAndResolve(auth, fileId, c.id,
+        await replyToComment(replyAuth, fileId, c.id,
           detectLanguage(c.content) === 'zh'
             ? '✅ 此留言已被同元素的較新留言覆蓋，以最新留言為準。'
             : '✅ This comment was superseded by a newer comment on the same element.');
@@ -102,7 +119,7 @@ async function processCommentFeedback(url, options = {}) {
       // Confidence gate for anchorless comments
       if (!comment.targetID && confidence < 0.7) {
         const reply = formatFailReply('留言位置不明確，信心度不足', '請在具體元素上留言');
-        await replyToComment(auth, fileId, comment.id, reply);
+        await replyToComment(replyAuth, fileId, comment.id, reply);
         failed.push({ id: comment.id, error: 'low_confidence_no_anchor' });
         continue;
       }
@@ -111,7 +128,7 @@ async function processCommentFeedback(url, options = {}) {
       if (comment.targetID && deletedTargets.has(
         typeof comment.targetID === 'object' ? JSON.stringify(comment.targetID) : comment.targetID
       )) {
-        await replyAndResolve(auth, fileId, comment.id, formatCascadeReply());
+        await replyToComment(replyAuth, fileId, comment.id, formatCascadeReply());
         processed.push({ id: comment.id, intent, status: 'cascade' });
         continue;
       }
@@ -119,7 +136,7 @@ async function processCommentFeedback(url, options = {}) {
       if (intent === 'question') {
         // Reply but don't resolve
         const lang = detectLanguage(comment.content);
-        await replyToComment(auth, fileId, comment.id,
+        await replyToComment(replyAuth, fileId, comment.id,
           lang === 'zh' ? '此問題需要人工回覆。' : 'This question requires a manual response.');
         processed.push({ id: comment.id, intent, status: 'question_replied' });
         continue;
@@ -157,13 +174,13 @@ async function processCommentFeedback(url, options = {}) {
         `根據留言「${comment.content.slice(0, 30)}」進行修改`,
         [comment.classified.action]
       );
-      await replyAndResolve(auth, fileId, comment.id, replyText);
+      await replyToComment(replyAuth, fileId, comment.id, replyText);
       processed.push({ id: comment.id, intent, status: 'done' });
 
     } catch (err) {
       const failReply = formatFailReply(err.message, '請手動處理此項目');
       try {
-        await replyToComment(auth, fileId, comment.id, failReply);
+        await replyToComment(replyAuth, fileId, comment.id, failReply);
       } catch { /* ignore reply failure */ }
       failed.push({ id: comment.id, error: err.message });
     }

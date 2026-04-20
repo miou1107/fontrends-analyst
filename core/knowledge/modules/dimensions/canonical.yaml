@@ -1,0 +1,73 @@
+# 📌 單一真實來源 — 8 個標準分析維度
+# 所有 engine / dimensions 模組 / script-planner 一律引用本檔的 id
+# 改名字只改這裡，其他地方用 id 引用不需改
+
+_meta:
+  name: canonical
+  description: 系統唯一認可的維度定義，不得分叉
+  locked_ids: true    # id 不可改（引用鏈很長），label/color 可改
+
+dimensions:
+  - id: engagement
+    label: 互動表現
+    short_label: 互動
+    slug: engagement
+    color: "#FF6B6B"
+    analyzer: engagement-analyzer
+    aliases: [engagement_rate, 互動率]
+
+  - id: reach
+    label: 觸及擴散
+    short_label: 觸及
+    slug: reach
+    color: "#4ECDC4"
+    analyzer: reach-analyzer
+    aliases: [reach_rate, 觸及率]
+
+  - id: sentiment
+    label: 情感傾向
+    short_label: 情感
+    slug: sentiment
+    color: "#95E1D3"
+    analyzer: sentiment-analyzer
+    aliases: [好感度, sentiment_score]
+
+  - id: share_of_voice
+    label: 聲量佔比
+    short_label: SOV
+    slug: sov
+    color: "#F38181"
+    analyzer: sov-analyzer
+    aliases: [sov, 聲量]
+
+  - id: competitor
+    label: 競品對比
+    short_label: 競品
+    slug: competitor
+    color: "#AA96DA"
+    analyzer: competitor-comparator
+    aliases: [competitive, 競爭]
+
+  - id: content
+    label: 內容表現
+    short_label: 內容
+    slug: content
+    color: "#FCBAD3"
+    analyzer: content-analyzer
+    aliases: [content_performance]
+
+  - id: audience
+    label: 受眾輪廓
+    short_label: 受眾
+    slug: audience
+    color: "#A8D8EA"
+    analyzer: audience-analyzer
+    aliases: [demographics]
+
+  - id: total
+    label: 整體概況
+    short_label: 整體
+    slug: total
+    color: "#888888"
+    analyzer: total-analyzer
+    aliases: [overall]

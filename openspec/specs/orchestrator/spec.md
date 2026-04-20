@@ -1,5 +1,14 @@
 # 指揮官 — Orchestrator
 
+> **⚠️ 2026-04-20 升級：** Orchestrator MUST 串接 [knowledge-layer](../knowledge-layer/spec.md) 定義的 resolver 鏈與 pipeline runner：
+> 1. 讀 `profiles/<type>.yaml` → stance resolver → module resolver → learned resolver → frozen snapshot
+> 2. 依 `profile.pipeline` 順序呼叫 engines，注入 snapshot + run context
+> 3. 每次執行建立 `runs/<id>/{inputs,context,temp,outputs,logs}/` 完整結構
+> 4. 支援 `pipeline rerun <id>` 三種 mode（same / refresh-knowledge / refresh-data），永不覆蓋舊版
+> 5. Run lifecycle: `mark-final` / `lineage` / `runs-cleanup` 指令
+>
+> 詳見 [knowledge-layer spec](../knowledge-layer/spec.md) 的 Resolver、Pipeline、Rerun、Lineage 章節。
+
 ## Input / Output Contract
 
 ### Input

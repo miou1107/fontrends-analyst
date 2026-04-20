@@ -1,0 +1,9 @@
+_meta:
+  name: analyst
+  description: 數據分析師 / 研究員
+
+role: analyst
+expertise: expert
+attention_budget: high
+language_preference: zh-TW
+decision_authority: advisory

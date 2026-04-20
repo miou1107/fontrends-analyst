@@ -32,7 +32,8 @@ function parseAnchor(anchor, fileType) {
 
 function filterUnresolved(comments) {
   if (!comments) return [];
-  return comments.filter(c => c.resolved === false);
+  // Drive API 在未顯式要求時可能不回傳 resolved 欄位；預設視為未解決
+  return comments.filter(c => c.resolved !== true);
 }
 
 function parseComment(raw, fileType) {

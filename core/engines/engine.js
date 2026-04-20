@@ -53,6 +53,7 @@ function parseArgs() {
     if (argv[i] === '--run' && argv[i + 1]) args.run = argv[++i];
     else if (argv[i] === '--format' && argv[i + 1]) args.format = argv[++i];
     else if (argv[i] === '--schema' && argv[i + 1]) args.schema = argv[++i];
+    else if (argv[i] === '--target-id' && argv[i + 1]) args.targetId = argv[++i];
   }
   if (!args.run) throw new Error('缺少 --run 參數（run 資料夾路徑）');
   if (!args.format) args.format = 'gslides';
@@ -555,7 +556,7 @@ const pageBuilders = {
 // Renderer Dispatch
 // ══════════════════════════════════════════════════════
 
-async function renderOutput(pages, config, format, runPath) {
+async function renderOutput(pages, config, format, runPath, targetId) {
   const rendererPath = path.join(__dirname, 'renderers', `${format}.js`);
   if (!fs.existsSync(rendererPath)) {
     throw new Error(`Renderer 不存在：${format}.js\n支援格式：gslides, pptx, gdocs`);
@@ -567,6 +568,7 @@ async function renderOutput(pages, config, format, runPath) {
     runPath,
     outputDir: path.join(runPath, 'output'),
     brandName: config.brand.name || config.brand.brand || 'Brand',
+    targetId: targetId || null,
   };
 
   // Ensure output dir exists
@@ -614,7 +616,7 @@ async function main() {
   console.log(`📄 組裝完成：${pages.length} 頁\n`);
 
   // Render
-  const result = await renderOutput(pages, config, args.format, args.run);
+  const result = await renderOutput(pages, config, args.format, args.run, args.targetId);
 
   console.log('\n✅ 產出完成！');
   if (result.url) console.log(`🔗 ${result.url}`);

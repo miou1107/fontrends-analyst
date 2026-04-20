@@ -1,0 +1,85 @@
+# Purpose × Dimension Hook 模板（對齊 purpose-binder/hook-generator.js）
+# 用 mini template engine 的語法：
+#   ${var}            變數插值
+#   ${var|default}    有預設
+#   {{#if var}}...{{/if}}  條件區塊
+#   array             依序嘗試，第一個非空的勝出
+
+_meta:
+  name: hook-templates
+  description: Hook 文案模板（5 purpose × 多 dimension）
+
+# Context 變數：brand, venue, metrics.*, insightType, season, direction_*, sentiment_label
+hook_templates:
+
+  sell-venue:
+    trend:
+      - when: metrics.mom_growth
+        then: "${brand} 聲量${direction_sell_venue} ${metrics.mom_growth}%，{{#if season}}${season} {{/if}}正值${venue}旺季"
+
+    platform:
+      - when: metrics.top_platform
+        then: "${metrics.top_platform} 高互動效率契合${venue}地標視覺特性"
+
+    search:
+      - when: metrics.search_intent_top
+        then: "${metrics.search_intent_top} 搜尋意圖與${venue}定位高度吻合"
+      - "搜尋意圖與${venue}定位高度吻合"
+
+    kol:
+      - when: metrics.kol_count
+        then: "${metrics.kol_count} 位 KOL 覆蓋，強化${venue}品牌曝光"
+      - "KOL 覆蓋強化${venue}品牌曝光"
+
+    sentiment:
+      - when: metrics.positive_ratio
+        then: "正面聲量佔 ${positive_pct}%，${venue}品牌形象加分"
+
+  brand-review:
+    trend:
+      - when: metrics.mom_growth
+        then: "${brand} 聲量${direction_brand_review} ${metrics.mom_growth}%"
+      - "${brand} 聲量趨勢${direction_brand_review}"
+
+    sentiment:
+      - when: sentiment_label
+        then: "品牌好感度${sentiment_label}，整體口碑表現穩定"
+
+    competitor:
+      - when: metrics.market_share_estimate
+        then: "市佔率 ${market_share_pct}%，競爭態勢清晰"
+
+    social_overview: "${brand} 社群影響力全面盤點"
+
+  market-entry:
+    search: "搜尋熱度顯示市場需求信號"
+    competitor: "競爭格局分析，進入時機評估"
+    language: "語系分布揭示目標受眾結構"
+    platform: "平台效率指引進入策略選擇"
+
+  kol-strategy:
+    kol:
+      - when: metrics.kol_count
+        then: "${metrics.kol_count} 位 KOL 生態，合作潛力評估"
+      - "KOL 生態與合作潛力評估"
+    platform: "各平台 KOL 效率差異，策略配置建議"
+    sentiment: "KOL 帶動之品牌好感度分析"
+
+  crisis-response:
+    sentiment:
+      - when: metrics.negative_ratio
+        then: "負面聲量佔 ${negative_pct}%，危機等級評估"
+      - "輿情走勢與危機信號監測"
+    trend: "聲量異常波動與危機時間軸"
+    kol: "KOL 輿論影響力與擴散風險"
+
+# LLM hook 提示詞模板（useLLM 時使用）
+hook_llm_prompt: |
+  Purpose: ${purposeType}
+  Dimension: ${dimension}
+  Brand: ${brand}
+  Venue: ${venue|N/A}
+  Metrics: ${metricsJson}
+  Insight type: ${insightType|unknown}
+
+  請用一句中文（≤${charLimit}字）將上述數據洞察與商業目的連結。

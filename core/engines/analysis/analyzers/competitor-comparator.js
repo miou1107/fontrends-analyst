@@ -1,8 +1,9 @@
 'use strict';
 const { multiplier: calcMultiplier } = require('../utils/stats');
 
-function compareCompetitor(selfMetrics, primary, market = []) {
+function compareCompetitor(selfMetrics, primary, market = [], snapshot) {
   if (!selfMetrics) return null;
+  const advMult = snapshot?.get?.('thresholds.scoring.competitor_advantage_multiplier') ?? 1.05;
 
   const primaryResult = { brand: primary?.brand || 'N/A', metrics: {} };
   if (primary?.metrics) {
@@ -13,8 +14,8 @@ function compareCompetitor(selfMetrics, primary, market = []) {
       if (selfVal == null) continue;
       const mult = calcMultiplier(selfVal, compVal);
       let advantage = 'tie';
-      if (selfVal > compVal * 1.05) advantage = 'self';
-      else if (compVal > selfVal * 1.05) advantage = 'competitor';
+      if (selfVal > compVal * advMult) advantage = 'self';
+      else if (compVal > selfVal * advMult) advantage = 'competitor';
       primaryResult.metrics[key] = {
         self: selfVal, competitor: compVal,
         multiplier: mult !== null ? parseFloat(mult.toFixed(2)) : null,

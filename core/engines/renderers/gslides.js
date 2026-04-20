@@ -179,12 +179,14 @@ function addRect(slideId, x, y, w, h, fillHex) {
 function addHeader(slideId, prefix, title, brand) {
   const textOnLight = resolveColor('text_on_light', brand);
   const primary = resolveColor('primary', brand);
+  // Title 高度留 0.95 容納 2 行（避免長標題被表格壓到）
+  // Fontsize 降 22 讓中文標題更容易在 9 inch 裡擺下單行
   return [
     ...addStyledText(slideId, title, {
-      prefix: `${prefix}_title`, x: 0.5, y: 0.3, w: 9, h: 0.6,
-      fontSize: 24, bold: true, color: 'text_on_light',
+      prefix: `${prefix}_title`, x: 0.5, y: 0.3, w: 9, h: 0.95,
+      fontSize: 22, bold: true, color: 'text_on_light',
     }, brand),
-    ...addRect(slideId, 0.5, 0.95, 2, 0.04, primary),
+    ...addRect(slideId, 0.5, 1.3, 2, 0.04, primary),
   ];
 }
 
@@ -503,39 +505,42 @@ function buildChapterSlide(slideId, chapter, brand) {
   // Subtitle (if present)
   if (chapter.subtitle) {
     reqs.push(...addStyledText(slideId, chapter.subtitle, {
-      prefix: `${slideId}_sub`, x: 0.5, y: 1.05, w: 9, h: 0.4,
-      fontSize: 12, italic: true, color: 'gray',
+      prefix: `${slideId}_sub`, x: 0.5, y: 1.4, w: 9, h: 0.4,
+      fontSize: 13, italic: true, color: 'gray',
     }, brand));
   }
 
-  let contentY = chapter.subtitle ? 1.55 : 1.2;
+  // 留夠空間給 header（title 容 2 行 + underline 在 1.3）
+  let contentY = chapter.subtitle ? 1.85 : 1.5;
 
-  // Data table (max 6 data rows)
+  // Data table (max 5 data rows to leave room for insight)
+  let tableBottomY = contentY;
   if (chapter.data_table) {
     const headers = chapter.data_table.headers;
-    const rows = chapter.data_table.rows.slice(0, 6);
+    const rows = chapter.data_table.rows.slice(0, 5);
     const rowCount = rows.length + 1; // +1 for header
-    const tableH = Math.min(0.35 + rowCount * 0.32, 3.0);
+    const tableH = Math.min(0.40 + rowCount * 0.35, 2.6);
     reqs.push(...addTable(slideId, slideId, 0.3, contentY, 9.4, tableH, headers, rows, 'primary', brand));
-    contentY += tableH + 0.15;
+    tableBottomY = contentY + tableH;
+    contentY = tableBottomY + 0.2;
   }
 
-  // Paragraph text — one key point, max 100 chars
+  // Paragraph text (only if no table)
   if (!chapter.data_table && chapter.paragraphs?.length) {
-    const para = chapter.paragraphs[0].slice(0, 100) + (chapter.paragraphs[0].length > 100 ? '…' : '');
+    const para = chapter.paragraphs[0].slice(0, 120) + (chapter.paragraphs[0].length > 120 ? '…' : '');
     reqs.push(...addStyledText(slideId, para, {
-      prefix: `${slideId}_para`, x: 0.5, y: contentY, w: 9, h: 1.2,
-      fontSize: 12, color: 'text_on_light',
+      prefix: `${slideId}_para`, x: 0.5, y: contentY, w: 9, h: 1.4,
+      fontSize: 14, color: 'text_on_light',
     }, brand));
-    contentY += 1.3;
+    contentY += 1.5;
   }
 
-  // Insight — italic at bottom
+  // Insight — bottom band, 保證不跟 table 重疊
   if (chapter.insight) {
-    const insightY = Math.max(contentY, 4.6);
-    reqs.push(...addStyledText(slideId, chapter.insight, {
+    const insightY = Math.max(contentY + 0.1, 4.85);
+    reqs.push(...addStyledText(slideId, `💡 ${chapter.insight}`, {
       prefix: `${slideId}_ins`, x: 0.5, y: insightY, w: 9, h: 0.5,
-      fontSize: 10, italic: true, color: 'primary',
+      fontSize: 12, italic: true, bold: true, color: 'text_on_light',
     }, brand));
   }
 
@@ -546,11 +551,11 @@ function buildChapterSlide(slideId, chapter, brand) {
  * Build speaker notes text from a narrative chapter.
  */
 function chapterSpeakerNotes(chapter) {
+  // 優先使用 narrative 作者提供的 speaker_notes（詳細講解腳本）
+  if (chapter.speaker_notes) return chapter.speaker_notes;
+  // Fallback: 自動組裝
   const parts = [`【${chapter.title}】`];
-  // Full paragraphs in notes for presenter reference
-  if (chapter.paragraphs) {
-    parts.push(chapter.paragraphs.join('\n'));
-  }
+  if (chapter.paragraphs) parts.push(chapter.paragraphs.join('\n'));
   if (chapter.so_what) parts.push(`\n要點：${chapter.so_what}`);
   if (chapter.action_link) parts.push(`場域連結：${chapter.action_link}`);
   return parts.join('\n');
@@ -573,43 +578,101 @@ async function renderFromNarrative(narrative, brand, theme, outputConfig) {
   const totalSlides = 1 + 1 + chapters.length + (hasRecs ? 1 : 0) + 1;
   console.log(`  Google Slides (narrative): generating ${totalSlides} slides for ${brandName}`);
 
-  // ── 1. Auth + create presentation ──
+  // ── 1. Auth + create or reuse presentation ──
   const auth = await getGoogleAuth(SCOPES);
   const slidesApi = google.slides({ version: 'v1', auth });
 
   const reportType = '品牌社群分析報告';
   const folderId = await findOrCreateDriveFolder(auth);
-  const title = await generateSequentialTitle(auth, folderId, brandName, reportType);
 
-  const pres = await slidesApi.presentations.create({
-    requestBody: {
-      title,
-      pageSize: {
-        width: { magnitude: inches(10), unit: 'EMU' },
-        height: { magnitude: inches(5.625), unit: 'EMU' },
-      },
-    },
-  });
-  const presentationId = pres.data.presentationId;
-  const defaultSlideId = pres.data.slides[0].objectId;
-  await moveFileToFolder(auth, presentationId, folderId);
-  console.log(`  Presentation ID: ${presentationId} (${title})`);
-
-  // ── 2. Create all slides + delete default ──
+  let presentationId;
+  let title;
   const slideIds = [];
-  const createReqs = [];
-  for (let i = 0; i < totalSlides; i++) {
-    const sid = `slide_${i + 1}`;
-    slideIds.push(sid);
-    createReqs.push({ createSlide: { objectId: sid, insertionIndex: i } });
-  }
-  createReqs.push({ deleteObject: { objectId: defaultSlideId } });
+  const targetId = outputConfig?.targetId;
 
-  await slidesApi.presentations.batchUpdate({
-    presentationId,
-    requestBody: { requests: createReqs },
-  });
-  console.log(`  ${totalSlides} slides created`);
+  if (targetId) {
+    // 🔥 In-place update — 改既有 presentation，不產新檔
+    // Rationale: comment-feedback 處理時須保留原 URL，避免留言鏈斷裂
+    presentationId = targetId;
+    const existing = await slidesApi.presentations.get({ presentationId });
+    title = existing.data.title;
+    console.log(`  ✏️  In-place update: ${presentationId} (${title})`);
+
+    // 刪所有既有 slides 除了第一張（當 placeholder，最後才刪）
+    const existingSlides = existing.data.slides || [];
+    const placeholderId = existingSlides[0]?.objectId;
+    if (existingSlides.length > 1) {
+      const deleteReqs = existingSlides.slice(1).map(s => ({ deleteObject: { objectId: s.objectId } }));
+      await slidesApi.presentations.batchUpdate({
+        presentationId,
+        requestBody: { requests: deleteReqs },
+      });
+    }
+
+    // Create new slides — 用時間戳前綴避免與既有 slide IDs 衝突
+    const rebuildPrefix = `r${Date.now().toString(36)}`;
+    const createReqs = [];
+    for (let i = 0; i < totalSlides; i++) {
+      const sid = `${rebuildPrefix}_${i + 1}`;
+      slideIds.push(sid);
+      createReqs.push({ createSlide: { objectId: sid, insertionIndex: i } });
+    }
+    if (placeholderId) createReqs.push({ deleteObject: { objectId: placeholderId } });
+    await slidesApi.presentations.batchUpdate({
+      presentationId,
+      requestBody: { requests: createReqs },
+    });
+    console.log(`  ${totalSlides} slides rebuilt`);
+  } else {
+    title = await generateSequentialTitle(auth, folderId, brandName, reportType);
+
+    const pres = await slidesApi.presentations.create({
+      requestBody: {
+        title,
+        pageSize: {
+          width: { magnitude: inches(10), unit: 'EMU' },
+          height: { magnitude: inches(5.625), unit: 'EMU' },
+        },
+      },
+    });
+    presentationId = pres.data.presentationId;
+    const defaultSlideId = pres.data.slides[0].objectId;
+    await moveFileToFolder(auth, presentationId, folderId);
+    console.log(`  Presentation ID: ${presentationId} (${title})`);
+
+    // Auto-grant SA writer — 讓 Bot 能回覆留言（鐵律 C）
+    try {
+      const { getServiceAccountEmail } = require('../helpers');
+      const saEmail = getServiceAccountEmail();
+      if (saEmail) {
+        const drive = google.drive({ version: 'v3', auth });
+        await drive.permissions.create({
+          fileId: presentationId,
+          sendNotificationEmail: false,
+          requestBody: { role: 'writer', type: 'user', emailAddress: saEmail },
+          fields: 'id',
+        });
+        console.log(`  🤖 SA granted writer access: ${saEmail}`);
+      }
+    } catch (e) {
+      console.log(`  ⚠️  SA auto-grant failed: ${e.message}（不影響主流程）`);
+    }
+
+    // ── 2. Create all slides + delete default ──
+    const createReqs = [];
+    for (let i = 0; i < totalSlides; i++) {
+      const sid = `slide_${i + 1}`;
+      slideIds.push(sid);
+      createReqs.push({ createSlide: { objectId: sid, insertionIndex: i } });
+    }
+    createReqs.push({ deleteObject: { objectId: defaultSlideId } });
+
+    await slidesApi.presentations.batchUpdate({
+      presentationId,
+      requestBody: { requests: createReqs },
+    });
+    console.log(`  ${totalSlides} slides created`);
+  }
 
   // ── 3. Build content requests ──
   const allRequests = [];
@@ -626,11 +689,11 @@ async function renderFromNarrative(narrative, brand, theme, outputConfig) {
   }, brand));
   allRequests.push(...addStyledText(coverSid, narrative.title || '品牌社群聲量分析報告', {
     prefix: 'cov_title', x: 0.5, y: 2.1, w: 9, h: 0.6,
-    fontSize: 20, color: 'white', align: 'CENTER',
+    fontSize: 20, color: 'text_on_dark', align: 'CENTER',
   }, brand));
   allRequests.push(...addStyledText(coverSid, `分析期間：${period}`, {
     prefix: 'cov_period', x: 0.5, y: 2.7, w: 9, h: 0.5,
-    fontSize: 14, color: 'lightGray', align: 'CENTER',
+    fontSize: 14, color: 'text_on_dark', align: 'CENTER',
   }, brand));
   allRequests.push(...addStyledText(coverSid, 'Powered by FonTrends × Journey101', {
     prefix: 'cov_footer', x: 0.5, y: 4.7, w: 9, h: 0.5,
@@ -643,7 +706,7 @@ async function renderFromNarrative(narrative, brand, theme, outputConfig) {
   const sumSid = slideIds[idx];
   const lightBg = resolveColor('light_bg', brand);
   allRequests.push(setPageBackground(sumSid, lightBg));
-  allRequests.push(...addHeader(sumSid, 'sum', '執行摘要', brand));
+  allRequests.push(...addHeader(sumSid, 'sum', '快速摘要', brand));
 
   if (narrative.executive_summary) {
     const sentences = narrative.executive_summary.split(/[。！]/).filter(s => s.trim()).slice(0, 3);
@@ -653,7 +716,7 @@ async function renderFromNarrative(narrative, brand, theme, outputConfig) {
       fontSize: 13, color: 'text_on_light',
     }, brand));
   }
-  speakerNotesMap.push({ slideIndex: idx, text: '【執行摘要】\n這頁是整份報告的精華。' });
+  speakerNotesMap.push({ slideIndex: idx, text: '【快速摘要】\n這頁是整份報告的精華。' });
   idx++;
 
   // ─── Chapter slides ───

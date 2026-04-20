@@ -1,0 +1,7 @@
+_meta:
+  name: brand-health
+  description: 著重品牌健康度（情感 / 好感度 / 危機訊號）
+
+dimensions_emphasize: [sentiment, content]
+must_show: [sentiment_trend, crisis_signals]
+alert_on: [negative_sentiment_spike, trust_decline]

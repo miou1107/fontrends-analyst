@@ -1,0 +1,65 @@
+# 目的 × 維度 親和度矩陣（對齊 purpose-binder/affinity-table.js）
+# 數值越高 = 該 purpose 越倚重該 dimension
+
+_meta:
+  name: purpose-affinity
+  description: 5 purpose × 8 dimension 的相關權重矩陣
+
+purpose_labels:
+  sell-venue: 推銷場地給品牌
+  brand-review: 品牌回顧報告
+  market-entry: 新市場評估
+  kol-strategy: KOL 合作策略
+  crisis-response: 危機應對
+
+affinity_dimensions: [social_overview, trend, language, platform, kol, sentiment, search, competitor]
+affinity_purpose_types: [sell-venue, brand-review, market-entry, kol-strategy, crisis-response]
+
+affinity_neutral_default: 0.5  # 未定義時的預設
+
+affinity_table:
+  sell-venue:
+    social_overview: 0.5
+    trend: 0.9
+    language: 0.4
+    platform: 0.7
+    kol: 0.7
+    sentiment: 0.5
+    search: 0.8
+    competitor: 0.5
+  brand-review:
+    social_overview: 0.8
+    trend: 0.9
+    language: 0.5
+    platform: 0.6
+    kol: 0.5
+    sentiment: 0.7
+    search: 0.4
+    competitor: 0.7
+  market-entry:
+    social_overview: 0.5
+    trend: 0.6
+    language: 0.8
+    platform: 0.7
+    kol: 0.4
+    sentiment: 0.5
+    search: 0.9
+    competitor: 0.8
+  kol-strategy:
+    social_overview: 0.4
+    trend: 0.5
+    language: 0.4
+    platform: 0.7
+    kol: 0.9
+    sentiment: 0.7
+    search: 0.3
+    competitor: 0.4
+  crisis-response:
+    social_overview: 0.5
+    trend: 0.8
+    language: 0.3
+    platform: 0.5
+    kol: 0.7
+    sentiment: 0.9
+    search: 0.5
+    competitor: 0.4

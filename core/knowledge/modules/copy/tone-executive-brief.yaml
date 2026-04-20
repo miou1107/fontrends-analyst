@@ -1,0 +1,23 @@
+# CEO / 高層簡報語氣：短句、結論先行、去術語
+
+_meta:
+  name: tone-executive-brief
+  description: 給 CEO 看的簡短語氣
+  extends: tone-professional   # 繼承 professional，只 override 需要的部分
+
+comment_reply:
+  success: "已調整：${summary}"
+  failure: "無法自動處理：${reason}"
+
+recommendations:
+  # 高層用語精簡
+  timelines:
+    urgent: 本週
+    near_term: 兩週內
+    mid_term: 本月
+    long_term: 下季
+
+headline_style:
+  prefer_conclusion_first: true
+  max_sentence_length: 20
+  avoid_jargon: true

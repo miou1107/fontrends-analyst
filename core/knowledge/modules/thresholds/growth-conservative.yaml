@@ -1,0 +1,20 @@
+# 變體：保守 — 門檻高，成熟品牌 / 大基數 / 只關注顯著訊號
+# 給 CEO / 高層看的報告常用這套
+
+_meta:
+  name: growth-conservative
+  description: 門檻較高的變體，適合成熟品牌、CEO 看的決策報告
+  extends: standard
+
+scoring:
+  growth_decline_detection: 15        # 15% 才算顯著（standard 10%）
+  significant_change: 15
+  max_insights: 3                     # 只挑最重要的
+  recommendations:
+    max_total: 6                      # 高層決策不要太多建議
+
+anomaly:
+  zscore_threshold: 3.0               # 只抓真正離譜的（standard 2.5）
+
+correlation:
+  strength_threshold: 0.8             # 更嚴（standard 0.7）

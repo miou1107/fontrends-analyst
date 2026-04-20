@@ -1,14 +1,14 @@
 {
   "typography": {
-    "title": { "font": "Noto Sans TC", "size": 24, "bold": true },
-    "subtitle": { "font": "Noto Sans TC", "size": 14, "bold": false },
-    "body": { "font": "Noto Sans TC", "size": 11 },
-    "table_header": { "font": "Noto Sans TC", "size": 9, "bold": true },
-    "table_body": { "font": "Noto Sans TC", "size": 9 },
-    "note": { "font": "Noto Sans TC", "size": 9, "italic": true },
-    "disclaimer": { "font": "Noto Sans TC", "size": 8, "italic": true },
-    "kpi_value": { "font": "Noto Sans TC", "size": 22, "bold": true },
-    "kpi_label": { "font": "Noto Sans TC", "size": 11 },
+    "title": { "font": "Noto Sans TC", "size": 28, "bold": true },
+    "subtitle": { "font": "Noto Sans TC", "size": 16, "bold": false },
+    "body": { "font": "Noto Sans TC", "size": 14 },
+    "table_header": { "font": "Noto Sans TC", "size": 11, "bold": true },
+    "table_body": { "font": "Noto Sans TC", "size": 11 },
+    "note": { "font": "Noto Sans TC", "size": 11, "italic": true },
+    "disclaimer": { "font": "Noto Sans TC", "size": 10, "italic": true },
+    "kpi_value": { "font": "Noto Sans TC", "size": 26, "bold": true },
+    "kpi_label": { "font": "Noto Sans TC", "size": 13 },
     "speaker_notes": { "font": "Noto Sans TC", "size": 12 }
   },
   "table": {

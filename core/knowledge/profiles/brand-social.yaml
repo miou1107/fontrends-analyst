@@ -1,0 +1,28 @@
+# 樣板 profile — 品牌社群分析（通用、對齊現有行為）
+# 直接指定 modules，不用 stance，用來做 regression baseline
+
+_meta:
+  name: brand-social
+  description: 品牌社群分析（對齊 2026-04-20 現有 code 行為，給 regression 用）
+  kind: modules-mode
+
+extends:
+  dimensions: [social-14d, metric-labels, script-pages, purpose-affinity]
+  thresholds: standard
+  keywords: [intent-base]
+  copy: [tone-professional, hook-templates, narrative-chapters]
+  time_windows: standard
+  density: standard       # 報告詳盡度（sparse / standard / deep）
+
+overrides: {}
+
+pipeline:
+  - data-extraction
+  - analysis-engine
+  - anomaly-detector
+  - insight-generator
+  - purpose-binder
+  - script-planner
+  - narrative-packaging
+  - presentation-generator
+  - report-audit

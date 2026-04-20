@@ -1,0 +1,8 @@
+_meta:
+  name: decision-support
+  description: 支援商業決策（go/no-go、資源分配、策略選擇）
+
+must_include_sections: [recommendations, risks, options]
+emphasize: [actionable_insights, tradeoffs]
+deemphasize: [raw_metrics, methodology]
+require_action: true
