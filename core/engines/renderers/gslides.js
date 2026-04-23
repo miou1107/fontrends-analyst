@@ -190,11 +190,24 @@ function addHeader(slideId, prefix, title, brand) {
   ];
 }
 
+// Table cell 截斷：避免文字換行撐高 row，擠壓下方 insight
+// 寬度 w（inch）÷ col 數 ≈ 每欄寬度；按中文字 ~0.13 inch/字估每欄最大字數，保留一些緩衝
+// 若超過 → 截尾加 …
+function truncateCell(text, maxChars) {
+  const s = String(text ?? '');
+  if (s.length <= maxChars) return s;
+  return s.slice(0, Math.max(1, maxChars - 1)) + '…';
+}
+
 function addTable(slideId, prefix, x, y, w, h, headers, rows, headerBgKey, brand) {
   const data = [headers, ...rows];
   const numRows = data.length;
   const numCols = headers.length;
   const tableId = uid(`${prefix}_tbl`);
+
+  // 依欄寬估算每 cell 最大字數（中文單字 ~0.13 inch，保留 2 字緩衝）
+  const colWidth = w / numCols;
+  const maxCharsPerCell = Math.max(6, Math.floor(colWidth / 0.13) - 2);
 
   const reqs = [{
     createTable: {
@@ -216,14 +229,14 @@ function addTable(slideId, prefix, x, y, w, h, headers, rows, headerBgKey, brand
     },
   }];
 
-  // Fill cells with text
+  // Fill cells with text（自動截斷，避免 row 換行撐高蓋到下方 insight）
   data.forEach((row, ri) => {
     row.forEach((cellText, ci) => {
       reqs.push({
         insertText: {
           objectId: tableId,
           cellLocation: { rowIndex: ri, columnIndex: ci },
-          text: String(cellText || ''),
+          text: truncateCell(cellText, maxCharsPerCell),
           insertionIndex: 0,
         },
       });

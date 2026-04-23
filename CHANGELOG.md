@@ -2,6 +2,18 @@
 
 本檔案記錄 fontrends-analyst 的重大變更，遵循 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/) 格式。
 
+## 2026-04-23 — Table cell 自動截斷 + 解決「insight 被表格蓋住」
+
+### Changed
+- **[engines/renderers/gslides.js](core/engines/renderers/gslides.js)** `addTable` 新增自動截斷
+  - 依欄寬估算每 cell 最大字數（中文字 ~0.13 inch/字 × 欄寬 − 2 字緩衝）
+  - 超過自動 `…` 截尾 — 避免 row 自動換行撐高 + 擠壓下方 insight
+  - 根治留言 [AAAB4uPvlaE]「這一句話被表格蓋住了」
+
+### Verified
+- Slide 6 KOL insight 不再被表格蓋住
+- Table rows 全部單行顯示
+
 ## 2026-04-23 — 自動擷取 Dashboard 分頁截圖 + 附錄可配置
 
 ### Added
