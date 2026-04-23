@@ -2,6 +2,34 @@
 
 本檔案記錄 fontrends-analyst 的重大變更，遵循 [Keep a Changelog](https://keepachangelog.com/zh-TW/1.1.0/) 格式。
 
+## 2026-04-23 — 自動擷取 Dashboard 分頁截圖 + 附錄可配置
+
+### Added
+- **[core/tools/capture-looker-tabs.js](core/tools/capture-looker-tabs.js)** Playwright headless 工具
+  - 自動從 `~/Library/.../Chrome/Default` 同步 Cookies / Login Data / Storage 到獨立 profile（`~/.fontrends/chrome-profile/`）
+  - 不干擾使用者 Chrome，不需手動登入
+  - 逐分頁 click + waitFor render + fullPage 截圖，檔名 `dashboard-<id>.png`
+  - 用 `getByRole('treeitem', { name, exact })` 精確匹配分頁
+- **[core/knowledge/modules/looker-tabs/journey101.yaml](core/knowledge/modules/looker-tabs/journey101.yaml)** Dashboard 分頁定義
+- `narrative.appendix_screenshots` 欄位 — user 可指定附錄順序與標題
+- Dependencies: `playwright` + chromium binary
+
+### Changed
+- **[engines/renderers/gslides.js](core/engines/renderers/gslides.js)** appendix 段
+  - 優先用 `narrative.appendix_screenshots` 配置
+  - Fallback 到掃 `screenshots/` 目錄（舊行為保留）
+- **[engines/renderers/gslides.js](core/engines/renderers/gslides.js)** chapter layout
+  - Insight 固定在 y=4.95，絕對不被 content 擠壓
+  - Table / paragraph max height 依「可用空間」動態計算（CONTENT_MAX_BOTTOM = 4.85）
+- **[engines/renderers/gslides.js](core/engines/renderers/gslides.js)** recommendations speaker notes
+  - 改讀 `narrative.recommendations_speaker_notes`（user 可客製）
+  - Fallback 自動組裝列出每項建議
+
+### Verified
+- 400/400 測試通過
+- SoC baseline 407 → 409（fallback string 2 條中文，user 已追認）
+- 第一次實跑：5 張 Dashboard 分頁完整截圖成功插入 Slides 附錄
+
 ## 2026-04-20 — Comment-feedback 全鏈路完整 + Service Account Bot 身份
 
 ### Added

@@ -1,0 +1,28 @@
+# Journey101 Super Dashboard 分頁定義（供 capture-looker-tabs.js 使用）
+# 每個 tab 會被點擊、等待 render、全頁截圖存為 dashboard-<id>.png
+
+_meta:
+  name: journey101
+  description: Journey101 Super Dashboard 分頁清單
+
+tabs:
+  - id: "01-social-overview"
+    label: "社群總覽"
+    title: "社群總覽"
+    wait_ms: 6000
+  - id: "02-trend"
+    label: "趨勢分析"
+    title: "趨勢分析"
+    wait_ms: 6000
+  - id: "03-platform"
+    label: "平台分布分析"
+    title: "平台分布分析"
+    wait_ms: 6000
+  - id: "04-sentiment"
+    label: "好感度分析"
+    title: "好感度分析"
+    wait_ms: 6000
+  - id: "05-kol"
+    label: "KOL分析"
+    title: "KOL 分析"
+    wait_ms: 6000

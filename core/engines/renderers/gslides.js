@@ -511,35 +511,47 @@ function buildChapterSlide(slideId, chapter, brand) {
   }
 
   // 留夠空間給 header（title 容 2 行 + underline 在 1.3）
-  let contentY = chapter.subtitle ? 1.85 : 1.5;
+  const contentStartY = chapter.subtitle ? 1.85 : 1.5;
+  let contentY = contentStartY;
 
-  // Data table (max 5 data rows to leave room for insight)
-  let tableBottomY = contentY;
+  // === Insight 永遠在 slide 底部固定區段 ===
+  // slide height = 5.625；insight 佔 y=4.95~5.45 共 0.5 高
+  // 也就是 content 最多只能用到 y=4.85（留 0.1 gap）
+  const INSIGHT_Y = 4.95;
+  const INSIGHT_H = 0.5;
+  const CONTENT_MAX_BOTTOM = INSIGHT_Y - 0.1; // 4.85
+  const availableContentH = CONTENT_MAX_BOTTOM - contentStartY;
+
+  // Data table — 依可用高度動態計算，不會超過 insight 線
   if (chapter.data_table) {
     const headers = chapter.data_table.headers;
-    const rows = chapter.data_table.rows.slice(0, 5);
-    const rowCount = rows.length + 1; // +1 for header
-    const tableH = Math.min(0.40 + rowCount * 0.35, 2.6);
+    // 每列高度 0.35，加上 header 列 0.4，依可用空間反推最大列數
+    const maxRows = Math.floor((availableContentH - 0.40) / 0.35);
+    const rows = chapter.data_table.rows.slice(0, Math.max(1, Math.min(5, maxRows)));
+    const rowCount = rows.length + 1;
+    const tableH = Math.min(0.40 + rowCount * 0.35, availableContentH);
     reqs.push(...addTable(slideId, slideId, 0.3, contentY, 9.4, tableH, headers, rows, 'primary', brand));
-    tableBottomY = contentY + tableH;
-    contentY = tableBottomY + 0.2;
+    contentY = contentY + tableH + 0.2;
   }
 
-  // Paragraph text (only if no table)
+  // Paragraph text (only if no table) — 同樣受限於 CONTENT_MAX_BOTTOM
   if (!chapter.data_table && chapter.paragraphs?.length) {
-    const para = chapter.paragraphs[0].slice(0, 120) + (chapter.paragraphs[0].length > 120 ? '…' : '');
+    const paraH = Math.min(1.4, CONTENT_MAX_BOTTOM - contentY);
+    // 最多字數依可用高度估算（每 0.35 inch 容一行、每行約 28 中文字）
+    const maxChars = Math.max(60, Math.floor(paraH / 0.35) * 28);
+    const raw = chapter.paragraphs[0];
+    const para = raw.length > maxChars ? raw.slice(0, maxChars - 1) + '…' : raw;
     reqs.push(...addStyledText(slideId, para, {
-      prefix: `${slideId}_para`, x: 0.5, y: contentY, w: 9, h: 1.4,
+      prefix: `${slideId}_para`, x: 0.5, y: contentY, w: 9, h: paraH,
       fontSize: 14, color: 'text_on_light',
     }, brand));
-    contentY += 1.5;
+    contentY += paraH + 0.1;
   }
 
-  // Insight — bottom band, 保證不跟 table 重疊
+  // Insight — 固定在 INSIGHT_Y 位置，保證不會被 content 蓋住
   if (chapter.insight) {
-    const insightY = Math.max(contentY + 0.1, 4.85);
     reqs.push(...addStyledText(slideId, `💡 ${chapter.insight}`, {
-      prefix: `${slideId}_ins`, x: 0.5, y: insightY, w: 9, h: 0.5,
+      prefix: `${slideId}_ins`, x: 0.5, y: INSIGHT_Y, w: 9, h: INSIGHT_H,
       fontSize: 12, italic: true, bold: true, color: 'text_on_light',
     }, brand));
   }
@@ -738,7 +750,20 @@ async function renderFromNarrative(narrative, brand, theme, outputConfig) {
       [r.priority || '', r.who || '', r.what || '', r.when || '', r.kpi || '']
     );
     allRequests.push(...addTable(recSid, 'rec', 0.2, 1.15, 9.6, 2.5, recHeaders, recRows, 'secondary', brand));
-    speakerNotesMap.push({ slideIndex: idx, text: '【行動建議】\n每個建議都有明確的負責人、內容、時程和 KPI。' });
+    // Speaker notes 優先用 narrative.recommendations_speaker_notes（user 可客製）
+    // 若未提供，fallback 到自動組裝（列出每項 what/who/kpi 概要）
+    const recNotes = narrative.recommendations_speaker_notes
+      || (() => {
+        const lines = ['【行動建議】\n逐項解釋每條建議的「為什麼、好處、風險、執行技巧」：\n'];
+        (narrative.recommendations || []).slice(0, 6).forEach((r, i) => {
+          lines.push(`${i + 1}. [${r.priority || ''}] ${r.what || ''}`);
+          if (r.who) lines.push(`   負責：${r.who}`);
+          if (r.when) lines.push(`   時程：${r.when}`);
+          if (r.kpi) lines.push(`   KPI：${r.kpi}`);
+        });
+        return lines.join('\n');
+      })();
+    speakerNotesMap.push({ slideIndex: idx, text: recNotes });
     idx++;
   }
 
@@ -793,20 +818,35 @@ async function renderFromNarrative(narrative, brand, theme, outputConfig) {
     : null;
 
   if (screenshotsDir && fs.existsSync(screenshotsDir)) {
-    const screenshots = fs.readdirSync(screenshotsDir)
-      .filter(f => /\.(png|jpg|jpeg)$/i.test(f))
-      .sort();
+    // 優先使用 narrative.appendix_screenshots 配置（明確指定檔名 + 標題 + 順序）
+    // Fallback：讀目錄內所有 png/jpg 依檔名排序（舊行為）
+    let appendixList;
+    if (Array.isArray(narrative.appendix_screenshots) && narrative.appendix_screenshots.length > 0) {
+      appendixList = narrative.appendix_screenshots
+        .filter(item => item?.file && fs.existsSync(path.join(screenshotsDir, item.file)))
+        .map(item => ({
+          filename: item.file,
+          pageName: item.title || item.file.replace(/\.(png|jpg|jpeg)$/i, ''),
+        }));
+    } else {
+      appendixList = fs.readdirSync(screenshotsDir)
+        .filter(f => /\.(png|jpg|jpeg)$/i.test(f))
+        .sort()
+        .map(filename => ({
+          filename,
+          pageName: filename
+            .replace(/^dashboard-/, '')
+            .replace(/\.(png|jpg|jpeg)$/i, '')
+            .replace(/_/g, ' '),
+        }));
+    }
 
-    if (screenshots.length > 0) {
+    if (appendixList.length > 0) {
       const drive = google.drive({ version: 'v3', auth });
       let insertIdx = totalSlides;
 
-      for (const filename of screenshots) {
+      for (const { filename, pageName } of appendixList) {
         const filePath = path.join(screenshotsDir, filename);
-        const pageName = filename
-          .replace(/^dashboard-/, '')
-          .replace(/\.(png|jpg|jpeg)$/i, '')
-          .replace(/_/g, ' ');
 
         try {
           const mimeType = filename.endsWith('.png') ? 'image/png' : 'image/jpeg';

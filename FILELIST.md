@@ -26,13 +26,15 @@ fontrends-analyst/
 │   │   │   ├── copy/               # tone-professional + tone-executive-brief
 │   │   │   ├── time-windows/standard.yaml
 │   │   │   ├── dimensions/         # canonical(📌) + metric-labels + script-pages + purpose-affinity + 2 變體
-│   │   │   └── density/            # standard / sparse / deep
+│   │   │   ├── density/            # standard / sparse / deep
+│   │   │   └── looker-tabs/        # Dashboard 分頁定義（journey101.yaml）
 │   │   └── profiles/               # brand-social / brand-social-for-ceo
 │   ├── knowledge-loader.js         # L2↔L3 唯一介面，產 frozen snapshot
 │   ├── template-engine.js          # Mini template engine (${var} + {{#if}})
 │   ├── tools/
-│   │   ├── check-soc-boundary.js   # SoC 守門檢查
-│   │   └── soc-boundary-baseline.json
+│   │   ├── check-soc-boundary.js       # SoC 守門檢查
+│   │   ├── soc-boundary-baseline.json
+│   │   └── capture-looker-tabs.js      # 自動擷取 Dashboard 分頁截圖（Playwright）
 │   └── version.json               # 核心版本資訊
 ├── openspec/                      # OpenSpec 規格文件
 │   ├── specs/                     # 22 個模組規格（新增 knowledge-layer）

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-04-20T07:44:38.240Z",
-  "total": 407,
+  "generated_at": "2026-04-23T09:19:00.732Z",
+  "total": 409,
   "files": {
     "engines/analysis/analyzers/cross-analyzer.js": 1,
     "engines/comment-feedback/comment-responder.js": 9,
@@ -14,7 +14,7 @@
     "engines/pre-report-verify/verify-engine.js": 38,
     "engines/profile-manager.js": 26,
     "engines/renderers/gdocs.js": 56,
-    "engines/renderers/gslides.js": 22,
+    "engines/renderers/gslides.js": 24,
     "engines/renderers/pptx.js": 14,
     "engines/report-audit/audit-engine.js": 27,
     "engines/research/dataforseo-client.js": 1,
